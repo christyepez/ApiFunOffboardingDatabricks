@@ -54,6 +54,7 @@ steps:
   displayName: Validate Postman assets
 
 - script: |
+    python -m pip install --disable-pip-version-check pyyaml
     python - <<'PY'
     import pathlib, yaml
     yaml.safe_load(pathlib.Path('api/openapi.yaml').read_text())
