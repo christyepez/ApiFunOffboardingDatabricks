@@ -1,0 +1,44 @@
+openapi: 3.0.3
+info:
+  title: Offboarding Databricks Facade API
+  version: 1.0.0
+  description: Controlled dynamic API facade over governed Databricks Gold views.
+servers:
+  - url: https://{apim-host}/offboarding/v1
+    variables:
+      apim-host: { default: api.example.com }
+paths:
+  /{resource}:
+    get:
+      operationId: queryResource
+      parameters:
+        - { name: resource, in: path, required: true, schema: { type: string } }
+        - { name: fields, in: query, schema: { type: string }, description: Comma-separated selectable public field names. }
+        - { name: filter, in: query, schema: { type: array, items: { type: string } }, style: form, explode: true, description: "field:operator:value. Can be repeated; semicolon separation is also accepted." }
+        - { name: sort, in: query, schema: { type: string }, description: Comma-separated sortable fields; prefix with - for descending. }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 1000, default: 100 } }
+        - { name: includeTotal, in: query, schema: { type: boolean, default: false } }
+        - { name: x-correlation-id, in: header, schema: { type: string, maxLength: 128 } }
+      responses:
+        '200': { description: Query result }
+        '400': { description: Invalid query }
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
+        '404': { description: Resource not exposed }
+        '429': { description: Rate limited }
+        '503': { description: Databricks unavailable }
+  /resources/{resource}/metadata:
+    get:
+      operationId: resourceMetadata
+      parameters:
+        - { name: resource, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Allowed public fields and capabilities }
+        '404': { description: Resource not exposed }
+  /health:
+    get:
+      operationId: health
+      responses:
+        '200': { description: Healthy }
+        '503': { description: Dependency degraded }
