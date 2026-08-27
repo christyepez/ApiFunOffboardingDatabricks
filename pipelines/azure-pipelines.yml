@@ -1,25 +1,76 @@
 trigger:
-  branches: { include: [ main ] }
+  branches:
+    include: [ main ]
+
 pr:
-  branches: { include: [ main ] }
-pool: { vmImage: ubuntu-latest }
+  branches:
+    include: [ main ]
+
+pool:
+  vmImage: ubuntu-latest
+
 variables:
   buildConfiguration: Release
+
 steps:
 - task: UseDotNet@2
-  inputs: { packageType: sdk, version: '10.x' }
+  displayName: Use .NET 10 SDK
+  inputs:
+    packageType: sdk
+    version: '10.x'
+
 - script: dotnet restore IdbInvest.Offboarding.Databricks.Facade.sln
   displayName: Restore
+
 - script: dotnet build IdbInvest.Offboarding.Databricks.Facade.sln --configuration $(buildConfiguration) --no-restore
   displayName: Build
-- script: dotnet test IdbInvest.Offboarding.Databricks.Facade.sln --configuration $(buildConfiguration) --no-build --collect:"XPlat Code Coverage"
-  displayName: Test
+
+- script: |
+    dotnet test IdbInvest.Offboarding.Databricks.Facade.sln \
+      --configuration $(buildConfiguration) \
+      --no-build \
+      --collect:"XPlat Code Coverage" \
+      --logger:"trx;LogFileName=unit-tests.trx"
+  displayName: Unit tests with coverage
+
+- task: PublishTestResults@2
+  displayName: Publish unit test results
+  condition: succeededOrFailed()
+  inputs:
+    testResultsFormat: VSTest
+    testResultsFiles: '**/unit-tests.trx'
+    searchFolder: '$(Agent.TempDirectory)'
+    failTaskOnFailedTests: true
+
+- task: PublishCodeCoverageResults@2
+  displayName: Publish code coverage
+  condition: succeededOrFailed()
+  inputs:
+    summaryFileLocation: '$(Agent.TempDirectory)/**/coverage.cobertura.xml'
+
+- script: |
+    node -e "JSON.parse(require('fs').readFileSync('postman/IDBInvest-Offboarding-Databricks-Facade.postman_collection.json','utf8')); console.log('Postman collection JSON: OK')"
+    node -e "JSON.parse(require('fs').readFileSync('postman/local.postman_environment.json','utf8')); console.log('Postman environment JSON: OK')"
+  displayName: Validate Postman assets
+
+- script: |
+    python - <<'PY'
+    import pathlib, yaml
+    yaml.safe_load(pathlib.Path('api/openapi.yaml').read_text())
+    print('OpenAPI YAML: OK')
+    PY
+  displayName: Validate OpenAPI syntax
+
 - script: dotnet publish src/IdbInvest.Offboarding.Databricks.Facade.Functions/IdbInvest.Offboarding.Databricks.Facade.Functions.csproj -c $(buildConfiguration) -o $(Build.ArtifactStagingDirectory)/function
   displayName: Publish Function
+
 - task: ArchiveFiles@2
+  displayName: Archive Function package
   inputs:
     rootFolderOrFile: '$(Build.ArtifactStagingDirectory)/function'
     includeRootFolder: false
     archiveFile: '$(Build.ArtifactStagingDirectory)/offboarding-function.zip'
+
 - publish: '$(Build.ArtifactStagingDirectory)/offboarding-function.zip'
+  displayName: Publish Function artifact
   artifact: function-package
