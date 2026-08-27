@@ -1,0 +1,24 @@
+<policies>
+  <inbound>
+    <base />
+    <!-- Replace placeholders via pipeline/named values. -->
+    <validate-azure-ad-token tenant-id="{{entra-tenant-id}}" header-name="Authorization" failed-validation-httpcode="401">
+      <audiences><audience>{{offboarding-api-audience}}</audience></audiences>
+      <required-claims><claim name="roles" match="any"><value>Offboarding.Read</value></claim></required-claims>
+    </validate-azure-ad-token>
+    <set-header name="x-correlation-id" exists-action="skip">
+      <value>@(Guid.NewGuid().ToString())</value>
+    </set-header>
+    <rate-limit-by-key calls="60" renewal-period="60" counter-key="@(context.Principal?.Identity?.Name ?? context.Subscription?.Key ?? context.Request.IpAddress)" />
+    <!-- Preferred: APIM Managed Identity to a Function protected by Entra ID. -->
+    <authentication-managed-identity resource="{{function-app-audience}}" />
+    <set-backend-service base-url="{{function-backend-url}}" />
+  </inbound>
+  <backend><base /></backend>
+  <outbound>
+    <base />
+    <set-header name="x-correlation-id" exists-action="override"><value>@(context.Request.Headers.GetValueOrDefault("x-correlation-id", Guid.NewGuid().ToString()))</value></set-header>
+    <set-header name="Server" exists-action="delete" />
+  </outbound>
+  <on-error><base /></on-error>
+</policies>

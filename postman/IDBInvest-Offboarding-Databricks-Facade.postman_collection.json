@@ -1,0 +1,109 @@
+{
+  "info": {
+    "_postman_id": "e366233e-df46-4ad8-8e88-e9cbdebe2181",
+    "name": "IDB Invest - Offboarding Databricks Facade",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:7071/api"
+    },
+    {
+      "key": "functionKey",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Query employees",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-correlation-id",
+            "value": "postman-{{$guid}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/offboarding/v1/employees?fields=employeeId,fullName,status,department&filter=status:eq:ACTIVE&sort=-updatedAt&page=1&pageSize=100&includeTotal=true",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "offboarding",
+            "v1",
+            "employees"
+          ],
+          "query": [
+            {
+              "key": "fields",
+              "value": "employeeId,fullName,status,department"
+            },
+            {
+              "key": "filter",
+              "value": "status:eq:ACTIVE"
+            },
+            {
+              "key": "sort",
+              "value": "-updatedAt"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "pageSize",
+              "value": "100"
+            },
+            {
+              "key": "includeTotal",
+              "value": "true"
+            },
+            {
+              "key": "code",
+              "value": "{{functionKey}}",
+              "disabled": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Employee metadata",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/offboarding/v1/resources/employees/metadata",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "offboarding",
+            "v1",
+            "resources",
+            "employees",
+            "metadata"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/offboarding/v1/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "offboarding",
+            "v1",
+            "health"
+          ]
+        }
+      }
+    }
+  ]
+}
