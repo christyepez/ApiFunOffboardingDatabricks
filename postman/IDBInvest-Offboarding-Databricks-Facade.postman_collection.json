@@ -2,108 +2,183 @@
   "info": {
     "_postman_id": "e366233e-df46-4ad8-8e88-e9cbdebe2181",
     "name": "IDB Invest - Offboarding Databricks Facade",
+    "description": "Functional and contract tests for the Offboarding Databricks Facade. English is the default language for names, scripts, messages, and documentation.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
+    { "key": "baseUrl", "value": "http://localhost:7071/api" },
+    { "key": "functionKey", "value": "" },
+    { "key": "accessToken", "value": "" }
+  ],
+  "event": [
     {
-      "key": "baseUrl",
-      "value": "http://localhost:7071/api"
-    },
-    {
-      "key": "functionKey",
-      "value": ""
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.variables.set('correlationId', 'postman-' + pm.variables.replaceIn('{{$guid}}'));"
+        ]
+      }
     }
   ],
   "item": [
     {
-      "name": "Query employees",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "x-correlation-id",
-            "value": "postman-{{$guid}}"
-          }
-        ],
-        "url": {
-          "raw": "{{baseUrl}}/offboarding/v1/employees?fields=employeeId,fullName,status,department&filter=status:eq:ACTIVE&sort=-updatedAt&page=1&pageSize=100&includeTotal=true",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "offboarding",
-            "v1",
-            "employees"
-          ],
-          "query": [
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health check succeeds",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "x-correlation-id", "value": "{{correlationId}}" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "disabled": true }
+            ],
+            "url": "{{baseUrl}}/offboarding/v1/health"
+          },
+          "event": [
             {
-              "key": "fields",
-              "value": "employeeId,fullName,status,department"
-            },
-            {
-              "key": "filter",
-              "value": "status:eq:ACTIVE"
-            },
-            {
-              "key": "sort",
-              "value": "-updatedAt"
-            },
-            {
-              "key": "page",
-              "value": "1"
-            },
-            {
-              "key": "pageSize",
-              "value": "100"
-            },
-            {
-              "key": "includeTotal",
-              "value": "true"
-            },
-            {
-              "key": "code",
-              "value": "{{functionKey}}",
-              "disabled": true
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response is JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Health payload contains status', function () { const body = pm.response.json(); pm.expect(body).to.have.property('status'); });",
+                  "pm.test('Response time is below 10 seconds', function () { pm.expect(pm.response.responseTime).to.be.below(10000); });"
+                ]
+              }
             }
           ]
         }
-      }
+      ]
     },
     {
-      "name": "Employee metadata",
-      "request": {
-        "method": "GET",
-        "url": {
-          "raw": "{{baseUrl}}/offboarding/v1/resources/employees/metadata",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "offboarding",
-            "v1",
-            "resources",
-            "employees",
-            "metadata"
+      "name": "Metadata",
+      "item": [
+        {
+          "name": "Employee metadata contract",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-correlation-id", "value": "{{correlationId}}" }],
+            "url": "{{baseUrl}}/offboarding/v1/resources/employees/metadata"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Metadata identifies the employees resource', function () { const body = pm.response.json(); pm.expect(body.resource).to.eql('employees'); });",
+                  "pm.test('Metadata exposes fields and maximum page size', function () { const body = pm.response.json(); pm.expect(body.fields).to.be.an('array').that.is.not.empty; pm.expect(body.maxPageSize).to.be.a('number'); });",
+                  "pm.test('Metadata does not expose physical Databricks source', function () { const raw = pm.response.text(); pm.expect(raw).not.to.include('gold.offboarding.vw_employees'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown resource returns 404",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-correlation-id", "value": "{{correlationId}}" }],
+            "url": "{{baseUrl}}/offboarding/v1/resources/not-a-resource/metadata"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status is 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('Error contract contains code and correlationId', function () { const body = pm.response.json(); pm.expect(body).to.have.property('code'); pm.expect(body).to.have.property('correlationId'); });"
+                ]
+              }
+            }
           ]
         }
-      }
+      ]
     },
     {
-      "name": "Health",
-      "request": {
-        "method": "GET",
-        "url": {
-          "raw": "{{baseUrl}}/offboarding/v1/health",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "offboarding",
-            "v1",
-            "health"
+      "name": "Dynamic Query",
+      "item": [
+        {
+          "name": "Query employees with filters and paging",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-correlation-id", "value": "{{correlationId}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/offboarding/v1/employees?fields=employeeId,fullName,status,department&filter=status:eq:ACTIVE&sort=-updatedAt&page=1&pageSize=100&includeTotal=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["offboarding", "v1", "employees"],
+              "query": [
+                { "key": "fields", "value": "employeeId,fullName,status,department" },
+                { "key": "filter", "value": "status:eq:ACTIVE" },
+                { "key": "sort", "value": "-updatedAt" },
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "100" },
+                { "key": "includeTotal", "value": "true" },
+                { "key": "code", "value": "{{functionKey}}", "disabled": true }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response follows query envelope contract', function () { const body = pm.response.json(); pm.expect(body.data).to.be.an('array'); pm.expect(body.meta).to.be.an('object'); });",
+                  "pm.test('Paging metadata is present', function () { const meta = pm.response.json().meta; pm.expect(meta.page).to.eql(1); pm.expect(meta.pageSize).to.eql(100); pm.expect(meta).to.have.property('returned'); pm.expect(meta).to.have.property('hasMore'); });",
+                  "pm.test('Correlation ID is returned in metadata', function () { const meta = pm.response.json().meta; pm.expect(meta.correlationId).to.be.a('string').and.not.empty; });",
+                  "pm.test('Physical Databricks identifiers are not exposed', function () { const raw = pm.response.text(); pm.expect(raw).not.to.include('vw_employees'); pm.expect(raw).not.to.include('employee_id'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown field is rejected",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-correlation-id", "value": "{{correlationId}}" }],
+            "url": "{{baseUrl}}/offboarding/v1/employees?fields=employeeId,password&page=1&pageSize=100"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status is 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Invalid query uses normalized error contract', function () { const body = pm.response.json(); pm.expect(body.code).to.eql('INVALID_QUERY'); pm.expect(body).to.have.property('message'); pm.expect(body).to.have.property('correlationId'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Page size above resource limit is rejected",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-correlation-id", "value": "{{correlationId}}" }],
+            "url": "{{baseUrl}}/offboarding/v1/employees?page=1&pageSize=1001"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status is 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error code is INVALID_QUERY', function () { pm.expect(pm.response.json().code).to.eql('INVALID_QUERY'); });"
+                ]
+              }
+            }
           ]
         }
-      }
+      ]
     }
   ]
 }
