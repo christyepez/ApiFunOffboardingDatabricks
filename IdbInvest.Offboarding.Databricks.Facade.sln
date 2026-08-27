@@ -1,0 +1,42 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdbInvest.Offboarding.Databricks.Facade.Core", "src\IdbInvest.Offboarding.Databricks.Facade.Core\IdbInvest.Offboarding.Databricks.Facade.Core.csproj", "{8C1A9C7B-75EA-4C4B-B9F7-1A7D891B13C1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdbInvest.Offboarding.Databricks.Facade.Application", "src\IdbInvest.Offboarding.Databricks.Facade.Application\IdbInvest.Offboarding.Databricks.Facade.Application.csproj", "{352E9F03-90C9-42D8-B971-E59E82529635}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdbInvest.Offboarding.Databricks.Facade.Infrastructure", "src\IdbInvest.Offboarding.Databricks.Facade.Infrastructure\IdbInvest.Offboarding.Databricks.Facade.Infrastructure.csproj", "{FDC7F349-EBC8-4D35-A0B0-D72163A8631B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdbInvest.Offboarding.Databricks.Facade.Functions", "src\IdbInvest.Offboarding.Databricks.Facade.Functions\IdbInvest.Offboarding.Databricks.Facade.Functions.csproj", "{EC740158-0B8E-4980-A21E-5CB4BB0B4982}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdbInvest.Offboarding.Databricks.Facade.Tests", "tests\IdbInvest.Offboarding.Databricks.Facade.Tests\IdbInvest.Offboarding.Databricks.Facade.Tests.csproj", "{754634A0-D798-4388-B1AC-3AC6C372BB34}"
+EndProject
+Global
+  GlobalSection(SolutionConfigurationPlatforms) = preSolution
+    Debug|Any CPU = Debug|Any CPU
+    Release|Any CPU = Release|Any CPU
+  EndGlobalSection
+  GlobalSection(ProjectConfigurationPlatforms) = postSolution
+    {8C1A9C7B-75EA-4C4B-B9F7-1A7D891B13C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {8C1A9C7B-75EA-4C4B-B9F7-1A7D891B13C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {8C1A9C7B-75EA-4C4B-B9F7-1A7D891B13C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+    {8C1A9C7B-75EA-4C4B-B9F7-1A7D891B13C1}.Release|Any CPU.Build.0 = Release|Any CPU
+    {352E9F03-90C9-42D8-B971-E59E82529635}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {352E9F03-90C9-42D8-B971-E59E82529635}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {352E9F03-90C9-42D8-B971-E59E82529635}.Release|Any CPU.ActiveCfg = Release|Any CPU
+    {352E9F03-90C9-42D8-B971-E59E82529635}.Release|Any CPU.Build.0 = Release|Any CPU
+    {FDC7F349-EBC8-4D35-A0B0-D72163A8631B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {FDC7F349-EBC8-4D35-A0B0-D72163A8631B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {FDC7F349-EBC8-4D35-A0B0-D72163A8631B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+    {FDC7F349-EBC8-4D35-A0B0-D72163A8631B}.Release|Any CPU.Build.0 = Release|Any CPU
+    {EC740158-0B8E-4980-A21E-5CB4BB0B4982}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {EC740158-0B8E-4980-A21E-5CB4BB0B4982}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {EC740158-0B8E-4980-A21E-5CB4BB0B4982}.Release|Any CPU.ActiveCfg = Release|Any CPU
+    {EC740158-0B8E-4980-A21E-5CB4BB0B4982}.Release|Any CPU.Build.0 = Release|Any CPU
+    {754634A0-D798-4388-B1AC-3AC6C372BB34}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {754634A0-D798-4388-B1AC-3AC6C372BB34}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {754634A0-D798-4388-B1AC-3AC6C372BB34}.Release|Any CPU.ActiveCfg = Release|Any CPU
+    {754634A0-D798-4388-B1AC-3AC6C372BB34}.Release|Any CPU.Build.0 = Release|Any CPU
+  EndGlobalSection
+EndGlobal
