@@ -1,0 +1,11 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "Databricks__Host": "https://adb-<workspace-id>.<region>.azuredatabricks.net",
+    "Databricks__WarehouseId": "<warehouse-id>",
+    "Databricks__AuthenticationMode": "PAT",
+    "Databricks__PersonalAccessToken": "<LOCAL-ONLY-PAT>"
+  }
+}

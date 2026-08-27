@@ -1,0 +1,69 @@
+{
+  "resources": [
+    {
+      "name": "employees",
+      "source": "gold.offboarding.vw_employees",
+      "maxPageSize": 1000,
+      "defaultFields": [
+        "employeeId",
+        "fullName",
+        "status",
+        "department",
+        "country",
+        "terminationDate",
+        "updatedAt"
+      ],
+      "fields": {
+        "employeeId": {
+          "column": "employee_id",
+          "type": "STRING",
+          "selectable": true,
+          "filterable": true,
+          "sortable": true
+        },
+        "fullName": {
+          "column": "full_name",
+          "type": "STRING",
+          "selectable": true,
+          "filterable": true,
+          "sortable": true
+        },
+        "status": {
+          "column": "status",
+          "type": "STRING",
+          "selectable": true,
+          "filterable": true,
+          "sortable": true
+        },
+        "department": {
+          "column": "department",
+          "type": "STRING",
+          "selectable": true,
+          "filterable": true,
+          "sortable": true
+        },
+        "country": {
+          "column": "country",
+          "type": "STRING",
+          "selectable": true,
+          "filterable": true,
+          "sortable": true
+        },
+        "terminationDate": {
+          "column": "termination_date",
+          "type": "DATE",
+          "selectable": true,
+          "filterable": true,
+          "sortable": true
+        },
+        "updatedAt": {
+          "column": "updated_at",
+          "type": "TIMESTAMP",
+          "selectable": true,
+          "filterable": true,
+          "sortable": true
+        }
+      }
+    }
+  ]
+}
