@@ -2,6 +2,12 @@
 
 Azure Functions facade that exposes governed Databricks Gold views as controlled REST resources. The repository follows the Visual Lease facade baseline (separate `src/` projects + isolated Functions + tests) while applying Clean Architecture boundaries.
 
+## Purpose and scope
+
+This solution is a stateless data-exposure facade. It reads governed offboarding data from Databricks and exposes it through controlled APIs so downstream systems can perform their own internal deprovisioning/offboarding processes.
+
+The facade does **not** perform user deactivation, account deletion, workflow orchestration, file staging, Azure Blob persistence, or downstream-system business logic.
+
 ## Architecture
 
 ```text
@@ -82,6 +88,12 @@ Local base URL: `http://localhost:7071/api`.
 
 `resource-definitions.json` is the API governance boundary. Example `employees` maps public field `employeeId` to physical column `employee_id`. Add resources only through reviewed configuration; never allow the caller to supply `source` or `column`.
 
+## Databricks result handling
+
+The repository uses Databricks Statement Execution `INLINE` + `JSON_ARRAY` mode. When Databricks splits a result into multiple chunks, the facade follows `next_chunk_index` and retrieves each subsequent chunk before mapping the API response. `Databricks:MaxResultChunks` provides a defensive upper bound (default `100`) so an unexpected or malformed dependency response cannot cause unbounded iteration.
+
+This prevents silent truncation to the first Databricks result chunk while keeping the facade stateless.
+
 ## APIM
 
 `api/openapi.yaml` is the initial API contract and `deploy/apim/inbound-policy.xml` is the policy baseline. Recommended ingress chain:
@@ -96,4 +108,6 @@ Local base URL: `http://localhost:7071/api`.
 
 - `includeTotal=true` issues a second `COUNT(1)` statement and should be used intentionally for large views.
 - The public response intentionally does not expose Databricks manifests, statement errors, or physical object names.
-- For very large datasets, replace page/offset with a deterministic cursor/keyset implementation before production-scale bulk integrations.
+- The facade is read-only and stateless; downstream systems remain responsible for their own offboarding/deprovisioning actions.
+- For large result sets, Databricks may return multiple result chunks. The facade retrieves them sequentially and enforces `MaxResultChunks`.
+- For very large consumer workloads, evolve the public API toward deterministic cursor/keyset pagination rather than exposing bulk exports through a single request.
