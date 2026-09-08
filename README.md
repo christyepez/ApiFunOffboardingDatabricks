@@ -178,7 +178,7 @@ When adding a resource, update the registry, unit tests, OpenAPI contract, Postm
 
 ## CI/CD
 
-`pipelines/azure-pipelines.yml` performs restore, build, unit tests with XPlat code coverage, Function publish, archive, and artifact publication.
+`azure-pipelines.yml` is the Azure DevOps entry point and delegates validation, mandatory SonarQube analysis, build, tests/coverage, package validation, Function publish, and the controlled deployment handoff to the centralized `idbinvest/idbisupportnetcodevalidation` template. The deployment handoff targets the shared pipeline `422`.
 
 Postman/Newman tests should execute after deployment to a DEV/test endpoint where the full APIM -> Function -> Databricks path is available.
 

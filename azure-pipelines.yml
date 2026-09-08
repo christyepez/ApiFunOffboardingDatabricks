@@ -1,0 +1,62 @@
+# =============================================================================
+# IDB Invest Offboarding - Databricks Facade Function App pipeline
+# =============================================================================
+# Delegates validation/build/test/Sonar/publish/deployment orchestration to the
+# centralized IDB Invest .NET validation template.
+#
+# Flow: CodeValidation -> central deployment pipeline (id 422).
+# APIM, networking and platform resources remain governed by the architecture;
+# this pipeline publishes the Offboarding Azure Function application package.
+# =============================================================================
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - src/**
+      - "*.sln"
+      - global.json
+      - Directory.Build.props
+      - azure-pipelines.yml
+
+pr: none
+
+# No root-level pool by design. The centralized template owns the validation
+# agent pool and uses the appropriate hosted agent for its REST deployment job.
+resources:
+  repositories:
+    - repository: net-validation
+      type: bitbucket
+      endpoint: "Bitbucket - oscarlo"
+      name: idbinvest/idbisupportnetcodevalidation
+      ref: refs/heads/main
+
+stages:
+  - template: pipelines/net-validate.yml@net-validation
+    parameters:
+      solutionOrProject: "IdbInvest.Offboarding.Databricks.Facade.sln"
+      dotnetVersion: "10.x"
+      coverageThreshold: 50
+      # SonarQube is mandatory in the centralized template.
+      # Replace this value with the real Offboarding SonarQube project key
+      # once the project is registered/confirmed in SonarQube.
+      sonarProjectKey: "REPLACE-WITH-OFFBOARDING-SONAR-PROJECT-KEY"
+      projectToPublish: "src/IdbInvest.Offboarding.Databricks.Facade.Functions/IdbInvest.Offboarding.Databricks.Facade.Functions.csproj"
+
+      deployPipelineId: "422"
+      appType: "functionapp"
+      appNameDev: "fn-np-d-idbinvest-offboarding-facade"
+      resourceGroupDev: "rg-np-d-idbinvest-offboarding"
+      deployDev: true
+
+      appNameTest: "fn-np-t-idbinvest-offboarding-facade"
+      resourceGroupTest: "rg-np-t-idbinvest-offboarding"
+      deployTest: true
+
+      # Production is prepared but intentionally disabled until the PROD
+      # Function App and deployment approval path are confirmed.
+      appNameProd: "fn-p-idbinvest-offboarding-facade"
+      resourceGroupProd: "rg-p-idbinvest-offboarding"
+      deployProd: false
