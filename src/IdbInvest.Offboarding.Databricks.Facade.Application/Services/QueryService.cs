@@ -25,6 +25,6 @@ public sealed class QueryService(
     {
         var definition = registry.GetRequired(resource);
         var fields = definition.Fields.Select(x => new ResourceFieldDto(x.Key, x.Value.Type, x.Value.Filterable, x.Value.Sortable, x.Value.Selectable)).ToArray();
-        return new ResourceMetadataDto(definition.Name, fields, definition.MaxPageSize);
+        return new ResourceMetadataDto(definition.Name, definition.Model, definition.ContractVersion, fields, definition.MaxPageSize);
     }
 }

@@ -79,12 +79,13 @@ public sealed class DatabricksStatementRepository(
             throw new DependencyUnavailableException($"Databricks statement ended in state {state}.");
         if (string.IsNullOrWhiteSpace(response.StatementId))
             throw new DependencyUnavailableException("Databricks did not return a statement id.");
+        var statementId = response.StatementId!;
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(_options.MaxPollSeconds));
         while (!timeout.IsCancellationRequested)
         {
             await Task.Delay(_options.PollIntervalMilliseconds, timeout.Token);
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/2.0/sql/statements/{Uri.EscapeDataString(response.StatementId)}");
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/2.0/sql/statements/{Uri.EscapeDataString(statementId)}");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await tokenProvider.GetTokenAsync(timeout.Token));
             var httpResponse = await httpClient.SendAsync(request, timeout.Token);
             if (!httpResponse.IsSuccessStatusCode) throw new DependencyUnavailableException("Databricks statement polling failed.");

@@ -4,6 +4,8 @@ public sealed class ResourceDefinition
 {
     public required string Name { get; init; }
     public required string Source { get; init; }
+    public string Model { get; init; } = "generic-resource";
+    public string ContractVersion { get; init; } = "1.0";
     public required IReadOnlyDictionary<string, FieldDefinition> Fields { get; init; }
     public required IReadOnlyList<string> DefaultFields { get; init; }
     public int MaxPageSize { get; init; } = 1000;

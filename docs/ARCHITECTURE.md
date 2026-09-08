@@ -6,7 +6,7 @@
 
 ## Visual Lease baseline retained
 
-The prior Visual Lease facade used separated `src` projects, an isolated worker Function project, a backend-client abstraction and a dedicated test project. This solution preserves that façade pattern, but replaces the Visual Lease backend client with an `IDatabricksRepository` and adds a governed dynamic query engine.
+The prior Visual Lease facade used separated `src` projects, an isolated worker Function project, a backend-client abstraction and a dedicated test project. This solution preserves that faÃ§ade pattern, but replaces the Visual Lease backend client with an `IDatabricksRepository` and adds a governed dynamic query engine.
 
 ## Request flow
 
@@ -26,3 +26,9 @@ The prior Visual Lease facade used separated `src` projects, an isolated worker 
 - Application role/JWT enforcement belongs in APIM and optionally Function EasyAuth/network restrictions.
 - Function -> Databricks identity has read-only SQL permissions.
 - PAT authentication is local-only.
+
+## Responsibility boundary
+
+The facade owns data exposure only. It identifies and publishes governed offboarding records from Databricks; it does not orchestrate or execute deprovisioning in ACBS, Workiva, PeopleSoft, or any future consumer. Consumer applications own their internal offboarding transactions, retries, state, and audit evidence.
+
+The logical data contract is configuration-driven through esource-definitions.json. model and contractVersion make the public contract independent from physical Databricks objects and from the identity of the consuming system.

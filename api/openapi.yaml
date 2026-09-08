@@ -1,8 +1,11 @@
 openapi: 3.0.3
 info:
-  title: Offboarding Databricks Facade API
+  title: Offboarding Data Exposure API
   version: 1.0.0
-  description: Controlled dynamic API facade over governed Databricks Gold views.
+  license: { name: Proprietary }
+  description: Read-only governed API that exposes offboarding data from approved Databricks Gold views. Consumer systems own their internal deprovisioning processes.
+security:
+  - bearerAuth: []
 servers:
   - url: https://{apim-host}/offboarding/v1
     variables:
@@ -10,6 +13,7 @@ servers:
 paths:
   /{resource}:
     get:
+      summary: Query an exposed offboarding resource
       operationId: queryResource
       parameters:
         - { name: resource, in: path, required: true, schema: { type: string } }
@@ -30,6 +34,7 @@ paths:
         '503': { description: Databricks unavailable }
   /resources/{resource}/metadata:
     get:
+      summary: Get logical contract metadata for a resource
       operationId: resourceMetadata
       parameters:
         - { name: resource, in: path, required: true, schema: { type: string } }
@@ -38,7 +43,16 @@ paths:
         '404': { description: Resource not exposed }
   /health:
     get:
+      summary: Check API and Databricks dependency health
       operationId: health
       responses:
         '200': { description: Healthy }
+        '401': { description: Unauthorized }
         '503': { description: Dependency degraded }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
