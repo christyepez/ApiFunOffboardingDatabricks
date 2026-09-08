@@ -22,7 +22,7 @@ public sealed class DatabricksStatementRepository(
     {
         var response = await ExecuteAsync(plan.Sql, plan.Parameters, cancellationToken);
         var columns = response.Manifest?.Schema?.Columns.Select(x => x.Name).ToArray() ?? [];
-        var data = response.Result?.DataArray ?? [];
+        var data = await ReadAllChunksAsync(response, cancellationToken);
         var rows = data.Select(row => (IReadOnlyDictionary<string, object?>)columns
             .Select((name, i) => new KeyValuePair<string, object?>(name, i < row.Count ? Normalize(row[i]) : null))
             .ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase)).ToArray();
@@ -81,21 +81,73 @@ public sealed class DatabricksStatementRepository(
             throw new DependencyUnavailableException("Databricks did not return a statement id.");
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(_options.MaxPollSeconds));
-        while (!timeout.IsCancellationRequested)
+        try
         {
-            await Task.Delay(_options.PollIntervalMilliseconds, timeout.Token);
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/2.0/sql/statements/{Uri.EscapeDataString(response.StatementId)}");
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await tokenProvider.GetTokenAsync(timeout.Token));
-            var httpResponse = await httpClient.SendAsync(request, timeout.Token);
-            if (!httpResponse.IsSuccessStatusCode) throw new DependencyUnavailableException("Databricks statement polling failed.");
-            response = await httpResponse.Content.ReadFromJsonAsync<StatementResponse>(cancellationToken: timeout.Token)
-                       ?? throw new DependencyUnavailableException("Databricks polling returned an empty response.");
-            state = response.Status?.State?.ToUpperInvariant();
-            if (state == "SUCCEEDED") return response;
-            if (state is "FAILED" or "CANCELED" or "CLOSED")
-                throw new DependencyUnavailableException($"Databricks statement ended in state {state}.");
+            while (!timeout.IsCancellationRequested)
+            {
+                await Task.Delay(_options.PollIntervalMilliseconds, timeout.Token);
+                using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/2.0/sql/statements/{Uri.EscapeDataString(response.StatementId)}");
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await tokenProvider.GetTokenAsync(timeout.Token));
+                var httpResponse = await httpClient.SendAsync(request, timeout.Token);
+                if (!httpResponse.IsSuccessStatusCode) throw new DependencyUnavailableException("Databricks statement polling failed.");
+                response = await httpResponse.Content.ReadFromJsonAsync<StatementResponse>(cancellationToken: timeout.Token)
+                           ?? throw new DependencyUnavailableException("Databricks polling returned an empty response.");
+                state = response.Status?.State?.ToUpperInvariant();
+                if (state == "SUCCEEDED") return response;
+                if (state is "FAILED" or "CANCELED" or "CLOSED")
+                    throw new DependencyUnavailableException($"Databricks statement ended in state {state}.");
+            }
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new DependencyUnavailableException("Databricks statement timed out.");
         }
         throw new DependencyUnavailableException("Databricks statement timed out.");
+    }
+
+    private async Task<IReadOnlyList<List<object?>>> ReadAllChunksAsync(StatementResponse response, CancellationToken cancellationToken)
+    {
+        var rows = new List<List<object?>>();
+        if (response.Result is null) return rows;
+
+        rows.AddRange(response.Result.DataArray);
+        var nextChunkIndex = response.Result.NextChunkIndex;
+        var fetchedChunks = 1;
+        var maxChunks = Math.Clamp(_options.MaxResultChunks, 1, 10_000);
+
+        if (nextChunkIndex.HasValue && string.IsNullOrWhiteSpace(response.StatementId))
+            throw new DependencyUnavailableException("Databricks returned chunked data without a statement id.");
+
+        while (nextChunkIndex.HasValue)
+        {
+            if (fetchedChunks >= maxChunks)
+                throw new DependencyUnavailableException($"Databricks result exceeded the configured chunk limit ({maxChunks}).");
+
+            var chunk = await GetChunkAsync(response.StatementId!, nextChunkIndex.Value, cancellationToken);
+            rows.AddRange(chunk.DataArray);
+            nextChunkIndex = chunk.NextChunkIndex;
+            fetchedChunks++;
+        }
+
+        return rows;
+    }
+
+    private async Task<StatementResult> GetChunkAsync(string statementId, int chunkIndex, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/api/2.0/sql/statements/{Uri.EscapeDataString(statementId)}/result/chunks/{chunkIndex}");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await tokenProvider.GetTokenAsync(cancellationToken));
+
+        var httpResponse = await httpClient.SendAsync(request, cancellationToken);
+        if (!httpResponse.IsSuccessStatusCode)
+        {
+            logger.LogError("Databricks result chunk {ChunkIndex} returned HTTP {StatusCode}.", chunkIndex, (int)httpResponse.StatusCode);
+            throw new DependencyUnavailableException($"Databricks result chunk {chunkIndex} could not be retrieved.");
+        }
+
+        return await httpResponse.Content.ReadFromJsonAsync<StatementResult>(cancellationToken: cancellationToken)
+               ?? throw new DependencyUnavailableException($"Databricks result chunk {chunkIndex} returned an empty response.");
     }
 
     private static object? Normalize(object? value)
