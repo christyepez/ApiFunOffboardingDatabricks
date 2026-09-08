@@ -37,7 +37,7 @@ GET /offboarding/v1/{resource}
 Example:
 
 ```http
-GET /offboarding/v1/employees?fields=employeeId,fullName,status&filter=status:eq:ACTIVE&sort=-updatedAt&page=1&pageSize=100&includeTotal=true
+GET /offboarding/v1/employees?fields=employeeId,fullName,email,status&filter=status:eq:OFFBOARDED&sort=-updatedAt&page=1&pageSize=100&includeTotal=true
 ```
 
 ### Query parameters
@@ -71,7 +71,8 @@ All caller values are sent to Databricks as parameters. They are never embedded 
     {
       "employeeId": "12345",
       "fullName": "Example User",
-      "status": "ACTIVE"
+      "email": "example.user@iadb.org",
+      "status": "OFFBOARDED"
     }
   ],
   "meta": {
@@ -99,6 +100,8 @@ Example response:
 ```json
 {
   "resource": "employees",
+  "model": "employee-offboarding-candidate",
+  "contractVersion": "1.0",
   "fields": [
     {
       "name": "employeeId",

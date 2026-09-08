@@ -104,3 +104,7 @@ Before production, confirm APIM and Function network topology, Private Endpoints
 ## Read-only responsibility boundary
 
 The Function identity requires only Databricks read permissions for approved views. The solution does not require write permissions in ACBS, Workiva, PeopleSoft, or any downstream application. Consumer systems remain responsible for application-specific write authorization and deprovisioning controls.
+
+## Backend authentication
+
+Production HTTP triggers use AuthorizationLevel.Anonymous because authentication is enforced at the platform boundary: APIM validates consumer JWTs, APIM authenticates to the Function App with Managed Identity, and Function App EasyAuth rejects unauthenticated/direct callers. This avoids distributing Function host keys while preserving defense in depth.

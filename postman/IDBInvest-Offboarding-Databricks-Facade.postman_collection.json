@@ -140,7 +140,7 @@
                                                                      }
                                                                  ],
                                                       "url":  {
-                                                                  "raw":  "{{baseUrl}}/offboarding/v1/employees?fields=employeeId,fullName,status,department\u0026filter=status:eq:ACTIVE\u0026sort=-updatedAt\u0026page=1\u0026pageSize=100\u0026includeTotal=true",
+                                                                  "raw":  "{{baseUrl}}/offboarding/v1/employees?fields=employeeId,fullName,status,department\u0026filter=status:eq:OFFBOARDED\u0026sort=-updatedAt\u0026page=1\u0026pageSize=100\u0026includeTotal=true",
                                                                   "host":  [
                                                                                "{{baseUrl}}"
                                                                            ],
@@ -156,7 +156,7 @@
                                                                                 },
                                                                                 {
                                                                                     "key":  "filter",
-                                                                                    "value":  "status:eq:ACTIVE"
+                                                                                    "value":  "status:eq:OFFBOARDED"
                                                                                 },
                                                                                 {
                                                                                     "key":  "sort",

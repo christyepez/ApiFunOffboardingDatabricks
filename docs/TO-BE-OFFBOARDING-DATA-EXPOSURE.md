@@ -19,9 +19,15 @@ Each consumer system owns its own offboarding workflow, writes, retries, applica
 - Consumers never submit raw SQL or physical Databricks identifiers.
 - Query values are parameterized.
 - APIM validates Microsoft Entra ID roles and applies throttling/correlation.
-- APIM backend credentials are externalized through named values / Key Vault.
+- APIM authenticates to the Function backend using its Managed Identity; Function App EasyAuth permits only the approved APIM application identity.
 - Databricks runtime identity is read-only and limited to approved views.
 
 ## Extensibility
 
 New consuming systems do not require new orchestration logic in this repository. New data contracts are added as governed resources or contract versions without coupling the API to ACBS, Workiva, PeopleSoft, or another consumer.
+
+## Source population contract
+
+The approved Databricks Gold view is responsible for restricting the source population to HR-approved offboarding candidates and the agreed operational lookback window (currently 30 days). The API exposes that curated population; it does not identify or deactivate users itself.
+
+The logical contract exposes `employeeId` as the primary correlation identifier and `email` as supporting identity data. Consumers must not assume email is globally unique or that application-specific usernames match corporate email values.

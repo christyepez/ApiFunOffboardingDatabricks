@@ -56,12 +56,14 @@ Databricks Statement Execution API
 Example:
 
 ```http
-GET /api/offboarding/v1/employees?fields=employeeId,fullName,status&filter=status:eq:ACTIVE&filter=country:eq:EC&sort=-updatedAt&page=1&pageSize=100&includeTotal=true
+GET /api/offboarding/v1/employees?fields=employeeId,fullName,email,status&filter=status:eq:OFFBOARDED&filter=country:eq:EC&sort=-updatedAt&page=1&pageSize=100&includeTotal=true
 ```
 
 Supported filter operators: `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `contains`.
 
 No endpoint accepts raw SQL, catalog/schema/view names, or physical column names from a caller. Identifiers are resolved only from `resource-definitions.json`; caller values use Databricks parameter markers.
+
+The approved Gold view is the business boundary for the exposed population. It must contain only HR-approved offboarding candidates for the agreed operational window (currently 30 days). The API does not broaden that population. employeeId is the primary correlation identifier; email is exposed as supporting identity data and must not be treated as globally unique by consumers.
 
 ## Dynamic-query security model
 
@@ -79,10 +81,10 @@ The facade provides flexibility without allowing consumers to control SQL. Each 
 A request such as:
 
 ```http
-GET /api/offboarding/v1/employees?fields=employeeId,status&filter=status:eq:ACTIVE
+GET /api/offboarding/v1/employees?fields=employeeId,status&filter=status:eq:OFFBOARDED
 ```
 
-is translated internally to parameterized SQL. `ACTIVE` is sent as a Databricks statement parameter and is not concatenated into the SQL text.
+is translated internally to parameterized SQL. `OFFBOARDED` is sent as a Databricks statement parameter and is not concatenated into the SQL text.
 
 ## Databricks authentication and authorization
 
@@ -198,3 +200,10 @@ Postman/Newman tests should execute after deployment to a DEV/test endpoint wher
 - The public response intentionally hides Databricks manifests, physical object names, and provider errors.
 - For large-volume exports, implement deterministic cursor/keyset pagination or an asynchronous bulk-extract pattern instead of unbounded synchronous API responses.
 - Production readiness requires final APIM networking, Entra roles, Databricks grants, Private Link/Private Endpoint decisions, observability, load testing, SLOs, and rollback validation.
+
+
+## Infrastructure as Code
+
+deploy/infra/main.bicep provides the shared DEV/TEST/PROD Azure deployment baseline for Function App, managed identity, host Storage, Log Analytics, Application Insights, Key Vault, and EasyAuth. Environment-specific network/CIDR values remain deployment inputs and are not invented in source control.
+
+See deploy/infra/README.md for deployment inputs, EasyAuth/Managed Identity flow, and the network boundary.

@@ -101,4 +101,4 @@ Any change to resource mappings, maximum page sizes, authentication, permissions
 
 Each resource in esource-definitions.json must define an explicit model and contractVersion. Increment contractVersion for breaking public-contract changes. Physical Databricks source changes that preserve the public contract do not require consumers to change.
 
-APIM offboarding-function-key must be an external named value, preferably backed by Azure Key Vault; never commit the Function key.
+APIM authenticates to the Function App with Managed Identity. The deployed Function App must enforce EasyAuth/Entra ID and allow only the approved APIM managed identity. No Function host key is required for the public API path.

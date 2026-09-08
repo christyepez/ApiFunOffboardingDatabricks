@@ -37,7 +37,7 @@ public sealed class QueryBuilderExtendedTests
     }
 
     [Theory]
-    [InlineData("status:eq:ACTIVE", "`status` = :p0")]
+    [InlineData("status:eq:OFFBOARDED", "`status` = :p0")]
     [InlineData("status:ne:INACTIVE", "`status` <> :p0")]
     [InlineData("updatedAt:gt:2026-01-01", "`updated_at` > :p0")]
     [InlineData("updatedAt:gte:2026-01-01", "`updated_at` >= :p0")]
@@ -71,7 +71,7 @@ public sealed class QueryBuilderExtendedTests
     {
         var sut = new QueryBuilder();
 
-        var plan = sut.Build(Employees, new QueryRequestDto(null, ["status:eq:ACTIVE;fullName:contains:John"], null, 1, 100, false));
+        var plan = sut.Build(Employees, new QueryRequestDto(null, ["status:eq:OFFBOARDED;fullName:contains:John"], null, 1, 100, false));
 
         Assert.Equal(2, plan.Parameters.Count);
         Assert.Contains("`status` = :p0", plan.Sql);
@@ -115,7 +115,7 @@ public sealed class QueryBuilderExtendedTests
     {
         var sut = new QueryBuilder();
 
-        var plan = sut.BuildCount(Employees, new QueryRequestDto("employeeId", ["status:eq:ACTIVE"], "-updatedAt", 3, 25, true));
+        var plan = sut.BuildCount(Employees, new QueryRequestDto("employeeId", ["status:eq:OFFBOARDED"], "-updatedAt", 3, 25, true));
 
         Assert.Contains("COUNT(1)", plan.Sql, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("`status` = :p0", plan.Sql);

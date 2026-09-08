@@ -10,7 +10,7 @@ public sealed class HealthController(IDatabricksRepository repository)
 {
     [Function("OffboardingHealth")]
     public async Task<HttpResponseData> GetAsync(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "offboarding/v1/health")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "offboarding/v1/health")] HttpRequestData req,
         CancellationToken cancellationToken)
     {
         var correlationId = RequestContext.GetCorrelationId(req);

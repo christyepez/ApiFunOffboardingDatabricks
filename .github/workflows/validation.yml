@@ -44,6 +44,10 @@ jobs:
           ET.parse('deploy/apim/inbound-policy.xml')
           print('OpenAPI and APIM policy: OK')
           PY
+      - name: Validate Bicep infrastructure
+        uses: azure/cli@v2
+        with:
+          inlineScript: az bicep build --file deploy/infra/main.bicep
       - name: Audit vulnerable packages
         run: dotnet list IdbInvest.Offboarding.Databricks.Facade.sln package --vulnerable --include-transitive
 

@@ -12,10 +12,6 @@
     <rate-limit-by-key calls="60" renewal-period="60" counter-key="@(context.Principal?.Identity?.Name ?? context.Subscription?.Key ?? context.Request.IpAddress)" />
     <!-- Preferred: APIM Managed Identity to a Function protected by Entra ID. -->
     <authentication-managed-identity resource="{{function-app-audience}}" />
-    <!-- Keep the Function host key outside source control. The APIM named value should be Key Vault-backed. -->
-    <set-header name="x-functions-key" exists-action="override">
-      <value>{{offboarding-function-key}}</value>
-    </set-header>
     <set-backend-service base-url="{{function-backend-url}}" />
   </inbound>
   <backend><base /></backend>
