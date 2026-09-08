@@ -22,8 +22,8 @@ steps:
 - script: dotnet restore IdbInvest.Offboarding.Databricks.Facade.sln
   displayName: Restore
 
-- script: dotnet build IdbInvest.Offboarding.Databricks.Facade.sln --configuration $(buildConfiguration) --no-restore
-  displayName: Build
+- script: dotnet build IdbInvest.Offboarding.Databricks.Facade.sln --configuration $(buildConfiguration) --no-restore --warnaserror
+  displayName: Build Release
 
 - script: |
     dotnet test IdbInvest.Offboarding.Databricks.Facade.sln \
@@ -49,27 +49,31 @@ steps:
     summaryFileLocation: '$(Agent.TempDirectory)/**/coverage.cobertura.xml'
 
 - script: |
+    node -e "JSON.parse(require('fs').readFileSync('src/IdbInvest.Offboarding.Databricks.Facade.Functions/resource-definitions.json','utf8')); console.log('Resource definitions JSON: OK')"
     node -e "JSON.parse(require('fs').readFileSync('postman/IDBInvest-Offboarding-Databricks-Facade.postman_collection.json','utf8')); console.log('Postman collection JSON: OK')"
     node -e "JSON.parse(require('fs').readFileSync('postman/local.postman_environment.json','utf8')); console.log('Postman environment JSON: OK')"
-  displayName: Validate Postman assets
+  displayName: Validate JSON assets
 
 - script: |
-    node -e "JSON.parse(require('fs').readFileSync('src/IdbInvest.Offboarding.Databricks.Facade.Functions/resource-definitions.json','utf8')); console.log('Resource definitions JSON: OK')"
+    npx --yes @redocly/cli lint api/openapi.yaml
     python - <<'PY'
     import xml.etree.ElementTree as ET
     ET.parse('deploy/apim/inbound-policy.xml')
     print('APIM policy XML: OK')
     PY
-  displayName: Validate exposure configuration
+  displayName: Validate OpenAPI and APIM
 
 - script: |
-    python -m pip install --disable-pip-version-check pyyaml
-    python - <<'PY'
-    import pathlib, yaml
-    yaml.safe_load(pathlib.Path('api/openapi.yaml').read_text())
-    print('OpenAPI YAML: OK')
-    PY
-  displayName: Validate OpenAPI syntax
+    az bicep install
+    az bicep build --file deploy/infra/main.bicep
+    for f in deploy/infra/parameters/*.bicepparam; do
+      az bicep build-params --file "$f" --stdout >/dev/null
+      echo "$f: OK"
+    done
+  displayName: Validate Bicep infrastructure
+
+- script: dotnet list IdbInvest.Offboarding.Databricks.Facade.sln package --vulnerable --include-transitive
+  displayName: Audit vulnerable packages
 
 - script: dotnet publish src/IdbInvest.Offboarding.Databricks.Facade.Functions/IdbInvest.Offboarding.Databricks.Facade.Functions.csproj -c $(buildConfiguration) -o $(Build.ArtifactStagingDirectory)/function
   displayName: Publish Function

@@ -73,7 +73,19 @@
                                                    }
                                      },
                           "model":  "employee-offboarding-candidate",
-                          "contractVersion":  "1.0"
+                          "contractVersion":  "1.0",
+                          "requiredFilters":  [
+                                                  {
+                                                      "field":  "status",
+                                                      "operator":  "eq",
+                                                      "value":  "OFFBOARDED"
+                                                  }
+                                              ],
+                          "lookback":  {
+                                           "field":  "terminationDate",
+                                           "days":  30
+                                       },
+                          "defaultSort":  "-terminationDate,employeeId"
                       }
                   ]
 }

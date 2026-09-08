@@ -1,4 +1,4 @@
-namespace IdbInvest.Offboarding.Databricks.Facade.Infrastructure.Databricks;
+﻿namespace IdbInvest.Offboarding.Databricks.Facade.Infrastructure.Databricks;
 
 public sealed class DatabricksOptions
 {
@@ -11,4 +11,5 @@ public sealed class DatabricksOptions
     public int WaitTimeoutSeconds { get; init; } = 30;
     public int PollIntervalMilliseconds { get; init; } = 750;
     public int MaxPollSeconds { get; init; } = 30;
+    public int MaxResultChunks { get; init; } = 100;
 }

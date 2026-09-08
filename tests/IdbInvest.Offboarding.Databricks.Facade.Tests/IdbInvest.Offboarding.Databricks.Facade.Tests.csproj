@@ -12,5 +12,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\IdbInvest.Offboarding.Databricks.Facade.Core\IdbInvest.Offboarding.Databricks.Facade.Core.csproj" />
     <ProjectReference Include="..\..\src\IdbInvest.Offboarding.Databricks.Facade.Application\IdbInvest.Offboarding.Databricks.Facade.Application.csproj" />
+    <ProjectReference Include="..\..\src\IdbInvest.Offboarding.Databricks.Facade.Infrastructure\IdbInvest.Offboarding.Databricks.Facade.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

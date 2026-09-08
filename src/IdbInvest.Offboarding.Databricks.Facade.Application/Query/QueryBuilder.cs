@@ -1,4 +1,4 @@
-using System.Text;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using IdbInvest.Offboarding.Databricks.Facade.Core.DTO;
 using IdbInvest.Offboarding.Databricks.Facade.Core.Exceptions;
@@ -57,30 +57,65 @@ public sealed class QueryBuilder : IQueryBuilder
 
     private static string BuildWhere(ResourceDefinition definition, QueryRequestDto request, out IReadOnlyList<SqlParameterValue> parameters)
     {
-        var parsed = FilterParser.Parse(request.Filters);
         var clauses = new List<string>();
         var values = new List<SqlParameterValue>();
-        var i = 0;
-        foreach (var filter in parsed)
+        var index = 0;
+
+        foreach (var required in definition.RequiredFilters)
+            AddFilter(definition, required.Field, required.Operator, required.Value, clauses, values, ref index);
+
+        if (definition.Lookback is not null)
         {
-            if (!definition.Fields.TryGetValue(filter.Field, out var field) || !field.Filterable)
-                throw new InvalidQueryException($"Field '{filter.Field}' is not filterable.");
-            if (!Operators.TryGetValue(filter.Operator, out var op))
-                throw new InvalidQueryException($"Operator '{filter.Operator}' is not allowed.");
-            var name = $"p{i++}";
-            var value = filter.Operator.Equals("contains", StringComparison.OrdinalIgnoreCase) ? $"%{filter.Value}%" : filter.Value;
-            clauses.Add($"{Quote(field.Column)} {op} :{name}");
-            values.Add(new SqlParameterValue(name, value, field.Type));
+            var cutoff = DateTime.UtcNow.Date.AddDays(-definition.Lookback.Days).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            AddFilter(definition, definition.Lookback.Field, "gte", cutoff, clauses, values, ref index);
         }
+
+        foreach (var filter in FilterParser.Parse(request.Filters))
+            AddFilter(definition, filter.Field, filter.Operator, filter.Value, clauses, values, ref index);
+
         parameters = values;
         return clauses.Count == 0 ? string.Empty : " WHERE " + string.Join(" AND ", clauses);
     }
 
-    private static string BuildOrderBy(ResourceDefinition definition, string? sort)
+    private static void AddFilter(
+        ResourceDefinition definition,
+        string fieldName,
+        string operatorName,
+        string rawValue,
+        ICollection<string> clauses,
+        ICollection<SqlParameterValue> values,
+        ref int index)
     {
-        if (string.IsNullOrWhiteSpace(sort)) return string.Empty;
+        if (!definition.Fields.TryGetValue(fieldName, out var field) || !field.Filterable)
+            throw new InvalidQueryException($"Field '{fieldName}' is not filterable.");
+        if (!Operators.TryGetValue(operatorName, out var op))
+            throw new InvalidQueryException($"Operator '{operatorName}' is not allowed.");
+
+        var name = $"p{index++}";
+        var value = operatorName.Equals("contains", StringComparison.OrdinalIgnoreCase) ? $"%{rawValue}%" : rawValue;
+        clauses.Add($"{Quote(field.Column)} {op} :{name}");
+        values.Add(new SqlParameterValue(name, value, field.Type));
+    }
+
+    private static string BuildOrderBy(ResourceDefinition definition, string? requestedSort)
+    {
+        var tokens = new List<string>();
+        if (!string.IsNullOrWhiteSpace(requestedSort))
+            tokens.AddRange(requestedSort.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+
+        if (!string.IsNullOrWhiteSpace(definition.DefaultSort))
+        {
+            foreach (var token in definition.DefaultSort.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var candidate = token.StartsWith('-') ? token[1..] : token;
+                if (!tokens.Any(existing => string.Equals(existing.StartsWith('-') ? existing[1..] : existing, candidate, StringComparison.OrdinalIgnoreCase)))
+                    tokens.Add(token);
+            }
+        }
+
+        if (tokens.Count == 0) return string.Empty;
         var parts = new List<string>();
-        foreach (var token in sort.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        foreach (var token in tokens)
         {
             var desc = token.StartsWith('-');
             var publicField = desc ? token[1..] : token;
@@ -88,9 +123,8 @@ public sealed class QueryBuilder : IQueryBuilder
                 throw new InvalidQueryException($"Field '{publicField}' is not sortable.");
             parts.Add($"{Quote(field.Column)} {(desc ? "DESC" : "ASC")}");
         }
-        return parts.Count == 0 ? string.Empty : " ORDER BY " + string.Join(", ", parts);
+        return " ORDER BY " + string.Join(", ", parts);
     }
-
     private static string Quote(string identifier)
     {
         if (!SafeIdentifier.IsMatch(identifier)) throw new InvalidOperationException($"Unsafe configured identifier '{identifier}'.");

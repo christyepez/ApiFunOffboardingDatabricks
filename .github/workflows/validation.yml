@@ -11,7 +11,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,6 +23,7 @@ jobs:
 
       - name: Restore
         run: dotnet restore IdbInvest.Offboarding.Databricks.Facade.sln
+
       - name: Build Release
         run: dotnet build IdbInvest.Offboarding.Databricks.Facade.sln -c Release --no-restore --warnaserror
 
@@ -37,17 +38,23 @@ jobs:
 
       - name: Validate OpenAPI and APIM XML
         run: |
-          python -m pip install --disable-pip-version-check pyyaml
+          npx --yes @redocly/cli lint api/openapi.yaml
           python - <<'PY'
-          import pathlib, yaml, xml.etree.ElementTree as ET
-          yaml.safe_load(pathlib.Path('api/openapi.yaml').read_text())
+          import xml.etree.ElementTree as ET
           ET.parse('deploy/apim/inbound-policy.xml')
-          print('OpenAPI and APIM policy: OK')
+          print('APIM policy XML: OK')
           PY
+
       - name: Validate Bicep infrastructure
         uses: azure/cli@v2
         with:
-          inlineScript: az bicep build --file deploy/infra/main.bicep
+          inlineScript: |
+            az bicep build --file deploy/infra/main.bicep
+            for f in deploy/infra/parameters/*.bicepparam; do
+              az bicep build-params --file "$f" --stdout >/dev/null
+              echo "$f: OK"
+            done
+
       - name: Audit vulnerable packages
         run: dotnet list IdbInvest.Offboarding.Databricks.Facade.sln package --vulnerable --include-transitive
 

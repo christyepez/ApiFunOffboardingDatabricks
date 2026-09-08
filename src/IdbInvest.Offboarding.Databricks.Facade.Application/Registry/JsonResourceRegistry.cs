@@ -7,6 +7,9 @@ namespace IdbInvest.Offboarding.Databricks.Facade.Application.Registry;
 
 public sealed class JsonResourceRegistry : IResourceRegistry
 {
+    private static readonly HashSet<string> AllowedOperators = new(StringComparer.OrdinalIgnoreCase)
+    { "eq", "ne", "gt", "gte", "lt", "lte", "contains" };
+
     private readonly IReadOnlyDictionary<string, ResourceDefinition> _resources;
 
     public JsonResourceRegistry(string filePath)
@@ -29,11 +32,41 @@ public sealed class JsonResourceRegistry : IResourceRegistry
     {
         foreach (var resource in _resources.Values)
         {
-            if (string.IsNullOrWhiteSpace(resource.Source) || resource.Fields.Count == 0)
-                throw new InvalidOperationException($"Resource '{resource.Name}' has an invalid configuration.");
+            if (string.IsNullOrWhiteSpace(resource.Name) || string.IsNullOrWhiteSpace(resource.Source) || resource.Fields.Count == 0)
+                throw new InvalidOperationException("Resource definitions require name, source, and at least one field.");
+            if (string.IsNullOrWhiteSpace(resource.Model) || string.IsNullOrWhiteSpace(resource.ContractVersion))
+                throw new InvalidOperationException($"Resource '{resource.Name}' requires model and contractVersion.");
+            if (resource.MaxPageSize is < 1 or > 5000)
+                throw new InvalidOperationException($"Resource '{resource.Name}' maxPageSize must be between 1 and 5000.");
+
             foreach (var field in resource.DefaultFields)
                 if (!resource.Fields.TryGetValue(field, out var def) || !def.Selectable)
                     throw new InvalidOperationException($"Default field '{field}' for '{resource.Name}' is invalid.");
+
+            if (!string.IsNullOrWhiteSpace(resource.DefaultSort))
+            {
+                foreach (var token in resource.DefaultSort.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    var fieldName = token.StartsWith('-') ? token[1..] : token;
+                    if (!resource.Fields.TryGetValue(fieldName, out var sortField) || !sortField.Sortable)
+                        throw new InvalidOperationException($"Default sort field '{fieldName}' for '{resource.Name}' is invalid.");
+                }
+            }
+            foreach (var required in resource.RequiredFilters)
+            {
+                if (!resource.Fields.TryGetValue(required.Field, out var field) || !field.Filterable)
+                    throw new InvalidOperationException($"Required filter field '{required.Field}' for '{resource.Name}' is invalid.");
+                if (!AllowedOperators.Contains(required.Operator))
+                    throw new InvalidOperationException($"Required filter operator '{required.Operator}' for '{resource.Name}' is invalid.");
+            }
+
+            if (resource.Lookback is not null)
+            {
+                if (!resource.Fields.TryGetValue(resource.Lookback.Field, out var field) || !field.Filterable)
+                    throw new InvalidOperationException($"Lookback field '{resource.Lookback.Field}' for '{resource.Name}' is invalid.");
+                if (resource.Lookback.Days is < 1 or > 3650)
+                    throw new InvalidOperationException($"Lookback days for '{resource.Name}' must be between 1 and 3650.");
+            }
         }
     }
 

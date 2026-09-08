@@ -207,3 +207,14 @@ Postman/Newman tests should execute after deployment to a DEV/test endpoint wher
 deploy/infra/main.bicep provides the shared DEV/TEST/PROD Azure deployment baseline for Function App, managed identity, host Storage, Log Analytics, Application Insights, Key Vault, and EasyAuth. Environment-specific network/CIDR values remain deployment inputs and are not invented in source control.
 
 See deploy/infra/README.md for deployment inputs, EasyAuth/Managed Identity flow, and the network boundary.
+
+## Mandatory exposure guardrails
+
+The public resource contract is not a pass-through to Databricks. `resource-definitions.json` applies server-side eligibility rules before any consumer filter. The `employees` contract always enforces `status = OFFBOARDED`, a 30-day `terminationDate` lookback, and a deterministic default sort. Consumers can narrow the result but cannot remove those controls.
+
+Databricks Statement Execution results are read across all INLINE result chunks. `Databricks:MaxResultChunks` prevents unbounded chunk traversal, and a Databricks `truncated=true` manifest is rejected rather than returning incomplete data.
+
+Azure Storage defined under `deploy/infra/` is Azure Functions host/runtime storage only. It is not application persistence and stores no offboarding workflow state.
+## Architecture synchronization
+
+The implementation-to-diagram compliance matrix is maintained in [docs/ARCHITECTURE_SYNC.md](docs/ARCHITECTURE_SYNC.md).

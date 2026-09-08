@@ -102,3 +102,9 @@ Any change to resource mappings, maximum page sizes, authentication, permissions
 Each resource in esource-definitions.json must define an explicit model and contractVersion. Increment contractVersion for breaking public-contract changes. Physical Databricks source changes that preserve the public contract do not require consumers to change.
 
 APIM authenticates to the Function App with Managed Identity. The deployed Function App must enforce EasyAuth/Entra ID and allow only the approved APIM managed identity. No Function host key is required for the public API path.
+
+## Exposure guardrails
+
+Each resource may define `requiredFilters`, `lookback`, and `defaultSort`. These values are trusted deployment configuration and are validated at startup. They are applied by the server before caller filters and cannot be overridden by a consumer.
+
+`Databricks:MaxResultChunks` bounds INLINE result-chunk traversal. Keep this value finite and review increases as part of API capacity governance.

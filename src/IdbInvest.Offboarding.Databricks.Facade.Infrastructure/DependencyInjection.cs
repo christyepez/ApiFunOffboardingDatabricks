@@ -23,6 +23,7 @@ public static class DependencyInjection
             .Validate(o => o.WaitTimeoutSeconds is > 0 and <= 50, "Databricks WaitTimeoutSeconds must be between 1 and 50 seconds.")
             .Validate(o => o.PollIntervalMilliseconds is >= 250 and <= 10000, "Databricks PollIntervalMilliseconds must be between 250 and 10000 milliseconds.")
             .Validate(o => o.MaxPollSeconds is > 0 and <= 300, "Databricks MaxPollSeconds must be between 1 and 300 seconds.")
+            .Validate(o => o.MaxResultChunks is > 0 and <= 10000, "Databricks MaxResultChunks must be between 1 and 10000.")
             .ValidateOnStart();
 
         var mode = configuration[$"{DatabricksOptions.SectionName}:AuthenticationMode"] ?? "DefaultAzureCredential";

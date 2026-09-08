@@ -2,8 +2,10 @@ openapi: 3.0.3
 info:
   title: Offboarding Data Exposure API
   version: 1.0.0
-  license: { name: Proprietary }
-  description: Read-only governed API that exposes offboarding data from approved Databricks Gold views. Consumer systems own their internal deprovisioning processes.
+  license:
+    name: Proprietary
+    url: https://www.idbinvest.org/en
+  description: Read-only governed API that exposes HR-approved offboarding candidates from approved Databricks Gold views. Consumer systems own their internal deprovisioning processes.
 security:
   - bearerAuth: []
 servers:
@@ -18,20 +20,24 @@ paths:
       parameters:
         - { name: resource, in: path, required: true, schema: { type: string } }
         - { name: fields, in: query, schema: { type: string }, description: Comma-separated selectable public field names. }
-        - { name: filter, in: query, schema: { type: array, items: { type: string } }, style: form, explode: true, description: "field:operator:value. Can be repeated; semicolon separation is also accepted." }
+        - { name: filter, in: query, schema: { type: array, items: { type: string } }, style: form, explode: true, description: "Additional consumer filters in field:operator:value format. Server-enforced eligibility filters cannot be removed." }
         - { name: sort, in: query, schema: { type: string }, description: Comma-separated sortable fields; prefix with - for descending. }
         - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
         - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 1000, default: 100 } }
         - { name: includeTotal, in: query, schema: { type: boolean, default: false } }
-        - { name: x-correlation-id, in: header, schema: { type: string, maxLength: 128 } }
+        - { name: x-correlation-id, in: header, schema: { type: string, maxLength: 128, pattern: '^[A-Za-z0-9._:-]+$' } }
       responses:
-        '200': { description: Query result }
-        '400': { description: Invalid query }
+        '200':
+          description: Governed query result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QueryResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '401': { description: Unauthorized }
         '403': { description: Forbidden }
-        '404': { description: Resource not exposed }
+        '404': { $ref: '#/components/responses/NotFound' }
         '429': { description: Rate limited }
-        '503': { description: Databricks unavailable }
+        '503': { $ref: '#/components/responses/DependencyUnavailable' }
   /resources/{resource}/metadata:
     get:
       summary: Get logical contract metadata for a resource
@@ -39,20 +45,146 @@ paths:
       parameters:
         - { name: resource, in: path, required: true, schema: { type: string } }
       responses:
-        '200': { description: Allowed public fields and capabilities }
-        '404': { description: Resource not exposed }
+        '200':
+          description: Allowed public fields and capabilities
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResourceMetadata' }
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /health/live:
+    get:
+      summary: Check service liveness without dependency calls
+      operationId: liveness
+      responses:
+        '200':
+          description: Service process is alive
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LivenessResponse' }
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
+  /health/ready:
+    get:
+      summary: Check service readiness including Databricks dependency
+      operationId: readiness
+      responses:
+        '200':
+          description: Service and Databricks are ready
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthResponse' }
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
+        '503':
+          description: Databricks dependency degraded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthResponse' }
   /health:
     get:
       summary: Check API and Databricks dependency health
       operationId: health
       responses:
-        '200': { description: Healthy }
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthResponse' }
         '401': { description: Unauthorized }
-        '503': { description: Dependency degraded }
-
+        '403': { description: Forbidden }
+        '503':
+          description: Dependency degraded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthResponse' }
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  responses:
+    BadRequest:
+      description: Invalid query
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    NotFound:
+      description: Resource not exposed
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    DependencyUnavailable:
+      description: Databricks dependency unavailable
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+  schemas:
+    QueryResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        meta:
+          $ref: '#/components/schemas/QueryMetadata'
+    QueryMetadata:
+      type: object
+      required: [resource, model, contractVersion, page, pageSize, returned, hasMore, correlationId]
+      properties:
+        resource: { type: string, example: employees }
+        model: { type: string, example: employee-offboarding-candidate }
+        contractVersion: { type: string, example: '1.0' }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, minimum: 1 }
+        returned: { type: integer, minimum: 0 }
+        total: { type: integer, format: int64, nullable: true, minimum: 0 }
+        hasMore: { type: boolean }
+        correlationId: { type: string }
+    ResourceMetadata:
+      type: object
+      required: [resource, model, contractVersion, fields, maxPageSize]
+      properties:
+        resource: { type: string }
+        model: { type: string }
+        contractVersion: { type: string }
+        fields:
+          type: array
+          items: { $ref: '#/components/schemas/FieldMetadata' }
+        maxPageSize: { type: integer, minimum: 1 }
+    FieldMetadata:
+      type: object
+      required: [name, type, filterable, sortable, selectable]
+      properties:
+        name: { type: string }
+        type: { type: string }
+        filterable: { type: boolean }
+        sortable: { type: boolean }
+        selectable: { type: boolean }
+    ApiError:
+      type: object
+      required: [code, message, correlationId]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        correlationId: { type: string }
+    LivenessResponse:
+      type: object
+      required: [status, service, correlationId]
+      properties:
+        status: { type: string, enum: [ok] }
+        service: { type: string }
+        correlationId: { type: string }
+    HealthResponse:
+      type: object
+      required: [status, service, databricks, correlationId]
+      properties:
+        status: { type: string, enum: [ok, degraded] }
+        service: { type: string }
+        databricks: { type: string, enum: [ok, unavailable] }
+        correlationId: { type: string }

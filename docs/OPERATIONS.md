@@ -119,3 +119,9 @@ Rollback should restore the last known-good Function package, APIM policy/config
 ## Capacity and cost
 
 Protect Databricks and Function consumption with bounded page sizes, APIM rate limits, quotas, query timeouts, and careful use of `includeTotal`. For high-volume export use cases, design a bulk/asynchronous integration rather than increasing synchronous API limits indefinitely.
+
+## Runtime storage and dependency checks
+
+Azure Storage in the infrastructure template is required by the Azure Functions host and is not business persistence. `AzureWebJobsStorage` uses managed identity. Elastic Premium content storage uses Azure Files with the connection string held in Key Vault and referenced by the Function App. Private deployments require the approved Function, Blob, File, Queue, Table and Key Vault private DNS/network inputs.
+
+If Databricks returns `truncated=true`, exceeds `MaxResultChunks`, or a result chunk cannot be retrieved, the API returns dependency-unavailable rather than incomplete data. Investigate warehouse/query sizing before retrying.

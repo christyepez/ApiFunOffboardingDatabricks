@@ -160,3 +160,9 @@ Example:
 GET /api/offboarding/v1/resources/{resource}/metadata returns the logical model and contractVersion in addition to public field capabilities. Consumers should bind to the logical contract and never to Databricks catalog/schema/view/column names.
 
 This API is read-only; no endpoint performs deprovisioning actions in consumer systems.
+
+## Server-enforced eligibility
+
+Consumer query parameters never define the base offboarding population. The current `employees` contract always applies `status = OFFBOARDED` and `terminationDate >= UTC today - 30 days` on the server. Consumer filters can only further restrict that population. When the caller omits `sort`, the configured deterministic default sort is applied.
+
+Every successful query response includes `meta.model` and `meta.contractVersion`, allowing consumers to bind to the logical contract version rather than physical Databricks identifiers.

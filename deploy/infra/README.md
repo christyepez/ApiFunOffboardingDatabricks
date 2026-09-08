@@ -1,7 +1,25 @@
 # Infrastructure as Code
 
-`main.bicep` is the deployment baseline for the Offboarding Data Exposure API. It is intentionally parameterized so DEV, TEST and PROD can reuse the same template without embedding environment credentials or corporate network values.
+The supplied **OFFBOARDING INTEGRATION ARCHITECTURE (VIA APIM IN AZURE)** diagram is the physical deployment reference for this repository.
 
+## Diagram synchronization
+
+| Reference design | IaC handling |
+| --- | --- |
+| `vnet-[env]-intranet-extend` | Existing corporate VNet, supplied through subnet resource IDs. |
+| `sn-[env]-apim-idbinvest-stv2` | Existing APIM subnet; not created here. |
+| Function integration subnet | Passed as `vnetIntegrationSubnetId`. |
+| `sn-pvt-pe-[env]-idbinvest-offboarding` | Passed as `privateEndpointSubnetId`. |
+| `rg-[env]-idbinvest` | Existing shared APIM resource group. |
+| `rg-[env]-idbinvest-offboarding` | Deployment target resource group for solution-owned resources. The `visuallease` label present in the reference drawing is not used by this implementation. |
+| `fn-*-idbinvest-offboarding-facade` | Function naming used by the environment samples. |
+| `kv-*-idbi-offboarding` | Key Vault naming used by the environment samples. |
+| Storage `sapidbioffboarding` | Logical storage shown in the diagram. The actual account name must be globally unique and environment-specific. It is used only by the Azure Functions runtime/content layer. |
+| `ai-*-idbinvest-offboarding` | Application Insights naming used by environment samples. |
+| `law-*-idbinvest-offboarding` | Log Analytics naming used by environment samples. |
+| Alerts | Azure Monitor alert baseline created by Bicep; approved Action Group IDs are environment inputs. |
+
+APIM is existing corporate infrastructure. This template deploys the Offboarding backend and its solution-owned dependencies, and the APIM policy/OpenAPI assets in this repository configure the **Offboarding Front API** on the existing gateway.
 ## Resources
 
 - Linux Azure Functions on Elastic Premium (`EP1`)
@@ -43,4 +61,10 @@ For a private-only deployment, supply the approved network design and add the co
 
 ## Data scope
 
-Infrastructure does not implement deprovisioning workflows. The deployed Function is read-only and exposes only approved Databricks Gold views. The approved offboarding view must enforce the HR-defined offboarding population (including the operational lookback window) before data is exposed.
+Infrastructure does not implement deprovisioning workflows. The deployed Function is read-only. The approved Databricks Gold view is curated and the API also enforces configured eligibility filters and the operational lookback window as defense in depth.
+
+## Azure Functions runtime storage
+
+The Storage Account is host/runtime infrastructure only and is not an offboarding data store. `AzureWebJobsStorage` uses the Function managed identity. Elastic Premium requires an Azure Files content share; its connection string must be created as an approved Key Vault secret and supplied through `azureFilesConnectionSecretUri`. No connection string is committed to source control.
+
+When `enablePrivateEndpoints=true`, provide approved subnet and Private DNS zone IDs for Function App, Blob, File, Queue, Table and Key Vault. Sample parameter files intentionally contain placeholders until corporate network values are supplied.

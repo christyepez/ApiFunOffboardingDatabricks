@@ -18,7 +18,7 @@ public sealed class QueryService(
         long? total = null;
         if (request.IncludeTotal)
             total = await repository.CountAsync(queryBuilder.BuildCount(definition, request), cancellationToken);
-        return new QueryResponseDto(rows, new QueryMetadataDto(resource, request.Page, request.PageSize, rows.Count, total, hasMore, correlationId));
+        return new QueryResponseDto(rows, new QueryMetadataDto(resource, definition.Model, definition.ContractVersion, request.Page, request.PageSize, rows.Count, total, hasMore, correlationId));
     }
 
     public ResourceMetadataDto GetMetadata(string resource)

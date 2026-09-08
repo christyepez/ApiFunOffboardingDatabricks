@@ -28,6 +28,14 @@ New consuming systems do not require new orchestration logic in this repository.
 
 ## Source population contract
 
-The approved Databricks Gold view is responsible for restricting the source population to HR-approved offboarding candidates and the agreed operational lookback window (currently 30 days). The API exposes that curated population; it does not identify or deactivate users itself.
+The approved Databricks Gold view is the curated source, and the API independently enforces the HR-approved eligibility boundary as defense in depth: `status = OFFBOARDED` plus the configured 30-day termination-date lookback. The API does not identify or deactivate users itself.
 
 The logical contract exposes `employeeId` as the primary correlation identifier and `email` as supporting identity data. Consumers must not assume email is globally unique or that application-specific usernames match corporate email values.
+
+## Enforced exposure boundary
+
+The API independently enforces the offboarding eligibility boundary configured in the logical resource definition. For the initial employee contract, `status = OFFBOARDED` and a 30-day termination-date lookback are mandatory server filters. Consumer filters are additive only. A deterministic server default sort protects page ordering.
+
+The Databricks adapter follows all INLINE result chunks and fails closed if Databricks reports a truncated result or the configured chunk safety limit is exceeded. This prevents silent partial datasets from being presented as complete responses.
+
+Azure Storage resources in the deployment template support the Azure Functions runtime only; this solution does not persist business-process state.

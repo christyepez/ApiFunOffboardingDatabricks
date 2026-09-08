@@ -30,6 +30,8 @@ public sealed class QueryServiceTests
         Assert.True(result.Meta.HasMore);
         Assert.Equal(2, result.Meta.Returned);
         Assert.Equal("corr-123", result.Meta.CorrelationId);
+        Assert.Equal("employee-offboarding-candidate", result.Meta.Model);
+        Assert.Equal("1.0", result.Meta.ContractVersion);
         Assert.Null(result.Meta.Total);
         Assert.Equal(1, repository.QueryCalls);
         Assert.Equal(0, repository.CountCalls);

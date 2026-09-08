@@ -108,3 +108,7 @@ The Function identity requires only Databricks read permissions for approved vie
 ## Backend authentication
 
 Production HTTP triggers use AuthorizationLevel.Anonymous because authentication is enforced at the platform boundary: APIM validates consumer JWTs, APIM authenticates to the Function App with Managed Identity, and Function App EasyAuth rejects unauthenticated/direct callers. This avoids distributing Function host keys while preserving defense in depth.
+
+## Data-minimization controls
+
+The API fails closed around the approved offboarding population. Mandatory eligibility filters are server-owned, error responses do not echo filter values, physical Databricks identifiers are hidden, and Databricks dependency bodies are not written to application logs. Email is supporting identity data only; `employeeId` remains the primary correlation identifier.
