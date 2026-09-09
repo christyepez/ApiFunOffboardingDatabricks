@@ -43,7 +43,7 @@ stages:
         steps:
           - checkout: self
           - script: |
-              node -e "['src/IdbInvest.Offboarding.Databricks.Facade.Functions/resource-definitions.json','postman/IDBInvest-Offboarding-Databricks-Facade.postman_collection.json','postman/local.postman_environment.json'].forEach(p=>JSON.parse(require('fs').readFileSync(p,'utf8'))); console.log('JSON assets: OK')"
+              node -e "['src/IdbInvest.Offboarding.Databricks.Facade.Functions/resource-definitions.json','postman/IDBInvest_Offboarding_Postman_Collection.json','postman/local.postman_environment.json'].forEach(p=>JSON.parse(require('fs').readFileSync(p,'utf8'))); console.log('JSON assets: OK')"
               npx --yes @redocly/cli lint api/openapi.yaml
               python - <<'PY'
               import xml.etree.ElementTree as ET

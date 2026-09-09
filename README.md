@@ -151,7 +151,7 @@ Coverage focuses on security-sensitive query generation, field/operator whitelis
 The repository includes functional and contract tests at:
 
 ```text
-postman/IDBInvest-Offboarding-Databricks-Facade.postman_collection.json
+postman/IDBInvest_Offboarding_Postman_Collection.json
 ```
 
 The collection checks health, metadata, valid dynamic queries, normalized errors, unknown fields, invalid page sizes, unknown resources, correlation IDs, and accidental exposure of physical Databricks identifiers.

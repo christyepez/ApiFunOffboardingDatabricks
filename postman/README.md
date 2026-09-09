@@ -4,7 +4,7 @@ English is the default language for all test names, assertions, console messages
 
 ## Files
 
-- `IDBInvest-Offboarding-Databricks-Facade.postman_collection.json`: functional and contract test collection.
+- `IDBInvest_Offboarding_Postman_Collection.json`: functional and contract test collection.
 - `local.postman_environment.json`: local environment template.
 
 ## Coverage
@@ -41,7 +41,7 @@ npm install -g newman
 Run:
 
 ```bash
-newman run postman/IDBInvest-Offboarding-Databricks-Facade.postman_collection.json \
+newman run postman/IDBInvest_Offboarding_Postman_Collection.json \
   -e postman/local.postman_environment.json \
   --reporters cli,junit \
   --reporter-junit-export TestResults/postman-results.xml
@@ -50,7 +50,7 @@ newman run postman/IDBInvest-Offboarding-Databricks-Facade.postman_collection.js
 For a deployed environment, override `baseUrl` without changing the collection:
 
 ```bash
-newman run postman/IDBInvest-Offboarding-Databricks-Facade.postman_collection.json \
+newman run postman/IDBInvest_Offboarding_Postman_Collection.json \
   --env-var baseUrl=https://<apim-host>/<api-base-path> \
   --env-var accessToken=<token>
 ```

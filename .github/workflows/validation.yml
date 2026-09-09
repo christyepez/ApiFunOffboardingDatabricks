@@ -33,7 +33,7 @@ jobs:
       - name: Validate JSON assets
         run: |
           node -e "JSON.parse(require('fs').readFileSync('src/IdbInvest.Offboarding.Databricks.Facade.Functions/resource-definitions.json','utf8')); console.log('resource-definitions.json: OK')"
-          node -e "JSON.parse(require('fs').readFileSync('postman/IDBInvest-Offboarding-Databricks-Facade.postman_collection.json','utf8')); console.log('Postman collection: OK')"
+          node -e "JSON.parse(require('fs').readFileSync('postman/IDBInvest_Offboarding_Postman_Collection.json','utf8')); console.log('Postman collection: OK')"
           node -e "JSON.parse(require('fs').readFileSync('postman/local.postman_environment.json','utf8')); console.log('Postman environment: OK')"
 
       - name: Validate OpenAPI and APIM XML
