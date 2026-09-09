@@ -230,6 +230,9 @@ resource authSettings 'Microsoft.Web/sites/config@2022-09-01' = {
     globalValidation: {
       requireAuthentication: true
       unauthenticatedClientAction: 'Return401'
+      excludedPaths: [
+        '/api/health'
+      ]
     }
     httpSettings: {
       requireHttps: true

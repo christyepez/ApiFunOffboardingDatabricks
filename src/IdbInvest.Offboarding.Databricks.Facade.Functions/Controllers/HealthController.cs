@@ -8,6 +8,26 @@ namespace IdbInvest.Offboarding.Databricks.Facade.Functions.Controllers;
 
 public sealed class HealthController(IDatabricksRepository repository)
 {
+    // IDB deployable-app health standard. With host.json routePrefix="api", this is GET /api/health.
+    [Function("Health")]
+    public async Task<HttpResponseData> CorporateHealthAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "health")] HttpRequestData req,
+        CancellationToken cancellationToken)
+    {
+        var correlationId = RequestContext.GetCorrelationId(req);
+        var healthy = await repository.PingAsync(cancellationToken);
+        var response = req.CreateResponse(healthy ? HttpStatusCode.OK : HttpStatusCode.ServiceUnavailable);
+        response.Headers.Add("x-correlation-id", correlationId);
+        response.Headers.Add("Cache-Control", "no-store");
+        await response.WriteAsJsonAsync(new
+        {
+            status = healthy ? "Healthy" : "Unhealthy",
+            service = "Offboarding.Databricks.Facade",
+            databricks = healthy ? "Healthy" : "Unhealthy",
+            correlationId
+        }, cancellationToken);
+        return response;
+    }
     [Function("OffboardingLiveness")]
     public async Task<HttpResponseData> LiveAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "offboarding/v1/health/live")] HttpRequestData req,

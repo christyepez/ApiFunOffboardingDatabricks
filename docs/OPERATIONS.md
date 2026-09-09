@@ -127,3 +127,12 @@ Protect Databricks and Function consumption with bounded page sizes, APIM rate l
 Azure Storage in the infrastructure template is required by the Azure Functions host and is not business persistence. `AzureWebJobsStorage` uses managed identity. Elastic Premium content storage uses Azure Files with the connection string held in Key Vault and referenced by the Function App. Private deployments require the approved Function, Blob, File, Queue, Table and Key Vault private DNS/network inputs.
 
 If Databricks returns `truncated=true`, exceeds `MaxResultChunks`, or a result chunk cannot be retrieved, the API returns dependency-unavailable rather than incomplete data. Investigate warehouse/query sizing before retrying.
+### IDB standard health endpoint
+
+The centralized IDB .NET validation/deployment standard requires the deployable Function App to expose:
+
+```http
+GET /api/health
+```
+
+Responses follow the corporate convention: `200` with `status=Healthy` (or `Degraded` when applicable) and `503` with `status=Unhealthy`. This route is intentionally excluded from EasyAuth so platform health probes do not require an access token. Business/data endpoints remain protected.

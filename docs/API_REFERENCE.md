@@ -173,3 +173,12 @@ This API is read-only; no endpoint performs deprovisioning actions in consumer s
 Consumer query parameters never define the base offboarding population. The current `employees` contract always applies `status = OFFBOARDED` and `terminationDate >= UTC today - 30 days` on the server. Consumer filters can only further restrict that population. When the caller omits `sort`, the configured deterministic default sort is applied.
 
 Every successful query response includes `meta.model` and `meta.contractVersion`, allowing consumers to bind to the logical contract version rather than physical Databricks identifiers.
+### Corporate platform health
+
+The deployable Azure Function also exposes the IDB standard platform endpoint directly on the Function host:
+
+```http
+GET /api/health
+```
+
+It returns `200` with `Healthy` (or `Degraded` when applicable) and `503` with `Unhealthy`. This platform endpoint is separate from the versioned `/offboarding/v1/*` consumer contract.
