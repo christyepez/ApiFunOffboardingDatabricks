@@ -72,11 +72,13 @@ stages:
       projectToPublish: "src/IdbInvest.Offboarding.Databricks.Facade.Functions/IdbInvest.Offboarding.Databricks.Facade.Functions.csproj"
       deployPipelineId: "422"
       appType: "functionapp"
-      appNameDev: "fn-np-d-idbinvest-offboarding-facade"
-      resourceGroupDev: "rg-np-d-idbinvest-offboarding"
+      # Actual resources created by the Terraform pipeline (run 12859): the
+      # Function Apps live in the shared rg-np-idbinvest-visuallease RG.
+      appNameDev: "fn-np-d-idbinvest-offboarding"
+      resourceGroupDev: "rg-np-idbinvest-visuallease"
       deployDev: true
-      appNameTest: "fn-np-t-idbinvest-offboarding-facade"
-      resourceGroupTest: "rg-np-t-idbinvest-offboarding"
+      appNameTest: "fn-np-t-idbinvest-offboarding"
+      resourceGroupTest: "rg-np-idbinvest-visuallease"
       deployTest: true
       # Production is prepared but intentionally disabled until the PROD
       # Function App and deployment approval path are confirmed.
