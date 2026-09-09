@@ -91,7 +91,7 @@ public sealed class DatabricksStatementRepositoryTests
               "result":{"data_array":[["E1"]]}
             }
             """));
-        var sut = Create(handler, maxChunks: 10, pollIntervalMilliseconds: 1);
+        var sut = Create(handler, maxChunks: 10, pollIntervalMilliseconds: 250);
 
         var result = await sut.QueryAsync(new QueryPlan("SELECT 1", [], ["employeeId"], 1, 10), CancellationToken.None);
 

@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Headers;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using IdbInvest.Offboarding.Databricks.Facade.Core.Exceptions;
@@ -57,6 +57,7 @@ public sealed class DatabricksStatementRepository(
 
     private async Task<StatementResponse> ExecuteAsync(string sql, IReadOnlyList<SqlParameterValue> parameters, CancellationToken cancellationToken)
     {
+        EnsureConfiguration();
         var payload = new StatementExecuteRequest(_options.WarehouseId, sql,
             parameters.Select(x => new StatementParameter(x.Name, x.Value, x.Type)).ToArray(),
             $"{Math.Clamp(_options.WaitTimeoutSeconds, 5, 50)}s");
@@ -157,6 +158,21 @@ public sealed class DatabricksStatementRepository(
                ?? throw new DependencyUnavailableException($"Databricks result chunk {chunkIndex} returned an empty response.");
     }
 
+    private void EnsureConfiguration()
+    {
+        if (!Uri.TryCreate(_options.Host, UriKind.Absolute, out _))
+            throw new DependencyUnavailableException("Databricks Host is not configured with a valid absolute URI.");
+        if (string.IsNullOrWhiteSpace(_options.WarehouseId) || _options.WarehouseId.Contains('<', StringComparison.Ordinal))
+            throw new DependencyUnavailableException("Databricks WarehouseId is not configured.");
+        if (_options.WaitTimeoutSeconds is <= 0 or > 50)
+            throw new DependencyUnavailableException("Databricks WaitTimeoutSeconds is outside the supported range.");
+        if (_options.PollIntervalMilliseconds is < 250 or > 10000)
+            throw new DependencyUnavailableException("Databricks PollIntervalMilliseconds is outside the supported range.");
+        if (_options.MaxPollSeconds is <= 0 or > 300)
+            throw new DependencyUnavailableException("Databricks MaxPollSeconds is outside the supported range.");
+        if (_options.MaxResultChunks is <= 0 or > 10000)
+            throw new DependencyUnavailableException("Databricks MaxResultChunks is outside the supported range.");
+    }
     private static DependencyUnavailableException CreateStatementFailure(StatementResponse response, string? state)
     {
         var errorCode = response.Status?.Error?.ErrorCode;
