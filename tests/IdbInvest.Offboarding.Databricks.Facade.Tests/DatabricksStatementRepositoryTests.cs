@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Text;
 using IdbInvest.Offboarding.Databricks.Facade.Core.Exceptions;
 using IdbInvest.Offboarding.Databricks.Facade.Core.Interfaces;
@@ -75,7 +75,135 @@ public sealed class DatabricksStatementRepositoryTests
             sut.QueryAsync(new QueryPlan("SELECT 1", [], ["employeeId"], 1, 100), CancellationToken.None));
     }
 
-    private static DatabricksStatementRepository Create(HttpMessageHandler handler, int maxChunks)
+
+    [Fact]
+    public async Task QueryAsync_PollsUntilSucceeded()
+    {
+        var handler = new SequenceHandler(
+            Json(HttpStatusCode.OK, """
+            {"statement_id":"stmt-poll","status":{"state":"PENDING"}}
+            """),
+            Json(HttpStatusCode.OK, """
+            {
+              "statement_id":"stmt-poll",
+              "status":{"state":"SUCCEEDED"},
+              "manifest":{"schema":{"columns":[{"name":"employeeId"}]},"truncated":false},
+              "result":{"data_array":[["E1"]]}
+            }
+            """));
+        var sut = Create(handler, maxChunks: 10, pollIntervalMilliseconds: 1);
+
+        var result = await sut.QueryAsync(new QueryPlan("SELECT 1", [], ["employeeId"], 1, 10), CancellationToken.None);
+
+        Assert.Single(result.Rows);
+        Assert.Equal("E1", result.Rows[0]["employeeId"]);
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Equal(HttpMethod.Get, handler.Requests[1].Method);
+    }
+
+    [Fact]
+    public async Task QueryAsync_ThrowsWhenInitialStatementFails()
+    {
+        var handler = new SequenceHandler(Json(HttpStatusCode.OK, """
+        {"statement_id":"stmt-fail","status":{"state":"FAILED","error":{"error_code":"BAD_STATEMENT"}}}
+        """));
+        var sut = Create(handler, maxChunks: 10);
+
+        var ex = await Assert.ThrowsAsync<DependencyUnavailableException>(() =>
+            sut.QueryAsync(new QueryPlan("SELECT 1", [], ["employeeId"], 1, 10), CancellationToken.None));
+
+        Assert.Contains("BAD_STATEMENT", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task QueryAsync_ThrowsWhenStatementIdMissingDuringPolling()
+    {
+        var handler = new SequenceHandler(Json(HttpStatusCode.OK, """
+        {"status":{"state":"PENDING"}}
+        """));
+        var sut = Create(handler, maxChunks: 10);
+
+        await Assert.ThrowsAsync<DependencyUnavailableException>(() =>
+            sut.QueryAsync(new QueryPlan("SELECT 1", [], ["employeeId"], 1, 10), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task QueryAsync_ThrowsOnHttpFailure()
+    {
+        var handler = new SequenceHandler(Json(HttpStatusCode.BadGateway, "{}"));
+        var sut = Create(handler, maxChunks: 10);
+
+        var ex = await Assert.ThrowsAsync<DependencyUnavailableException>(() =>
+            sut.QueryAsync(new QueryPlan("SELECT 1", [], ["employeeId"], 1, 10), CancellationToken.None));
+
+        Assert.Contains("502", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CountAsync_ReturnsParsedTotal()
+    {
+        var handler = new SequenceHandler(Json(HttpStatusCode.OK, """
+        {
+          "statement_id":"stmt-count",
+          "status":{"state":"SUCCEEDED"},
+          "result":{"data_array":[["42"]]}
+        }
+        """));
+        var sut = Create(handler, maxChunks: 10);
+
+        var total = await sut.CountAsync(new CountQueryPlan("SELECT COUNT(1)", []), CancellationToken.None);
+
+        Assert.Equal(42, total);
+    }
+
+    [Fact]
+    public async Task CountAsync_RejectsUnexpectedResult()
+    {
+        var handler = new SequenceHandler(Json(HttpStatusCode.OK, """
+        {"statement_id":"stmt-count","status":{"state":"SUCCEEDED"},"result":{"data_array":[]}}
+        """));
+        var sut = Create(handler, maxChunks: 10);
+
+        await Assert.ThrowsAsync<DependencyUnavailableException>(() =>
+            sut.CountAsync(new CountQueryPlan("SELECT COUNT(1)", []), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task PingAsync_ReturnsTrueOnSuccess()
+    {
+        var handler = new SequenceHandler(Json(HttpStatusCode.OK, """
+        {"statement_id":"stmt-ping","status":{"state":"SUCCEEDED"},"result":{"data_array":[[1]]}}
+        """));
+        var sut = Create(handler, maxChunks: 10);
+
+        Assert.True(await sut.PingAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task PingAsync_ReturnsFalseOnFailure()
+    {
+        var handler = new SequenceHandler(Json(HttpStatusCode.ServiceUnavailable, "{}"));
+        var sut = Create(handler, maxChunks: 10);
+
+        Assert.False(await sut.PingAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task QueryAsync_RejectsChunkedDataWithoutStatementId()
+    {
+        var handler = new SequenceHandler(Json(HttpStatusCode.OK, """
+        {
+          "status":{"state":"SUCCEEDED"},
+          "manifest":{"schema":{"columns":[{"name":"employeeId"}]},"truncated":false},
+          "result":{"data_array":[["E1"]],"next_chunk_index":1}
+        }
+        """));
+        var sut = Create(handler, maxChunks: 10);
+
+        await Assert.ThrowsAsync<DependencyUnavailableException>(() =>
+            sut.QueryAsync(new QueryPlan("SELECT 1", [], ["employeeId"], 1, 10), CancellationToken.None));
+    }
+    private static DatabricksStatementRepository Create(HttpMessageHandler handler, int maxChunks, int pollIntervalMilliseconds = 250)
     {
         var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.azuredatabricks.net") };
         var options = Options.Create(new DatabricksOptions
@@ -83,7 +211,7 @@ public sealed class DatabricksStatementRepositoryTests
             Host = "https://example.azuredatabricks.net",
             WarehouseId = "warehouse",
             WaitTimeoutSeconds = 5,
-            PollIntervalMilliseconds = 250,
+            PollIntervalMilliseconds = pollIntervalMilliseconds,
             MaxPollSeconds = 5,
             MaxResultChunks = maxChunks
         });
