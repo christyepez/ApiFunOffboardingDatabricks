@@ -6,7 +6,7 @@ This matrix proves alignment between the authoritative **OFFBOARDING INTEGRATION
 | --- | --- | --- | --- |
 | Consumer systems: PeopleSoft Facade / SaaS / Legacy | Consume offboarding data and perform their own internal deprovisioning | OpenAPI + APIM policy + responsibility boundary in `docs/ARCHITECTURE.md` | Aligned |
 | Corporate APIM in `rg-[env]-idbinvest` | Gateway, JWT validation, throttling, correlation, backend routing | `deploy/apim/inbound-policy.xml`; APIM is referenced as existing corporate infrastructure | Aligned |
-| Offboarding Front API | Versioned read-only API exposed to consumers | `/offboarding/v1/{resource}`, metadata and health routes in Function/OpenAPI/Postman | Aligned |
+| Offboarding Front API | Versioned read-only API exposed to consumers | `/offboarding/v1/{resource}`, metadata, `/healthcheck`, liveness and readiness routes in Function/OpenAPI/Postman | Aligned |
 | Azure Function `fn-[env]-idbinvest-offboarding-facade` | Facade/query engine and anti-corruption layer | .NET 10 isolated Functions projects; Bicep parameter samples use the diagram naming | Aligned |
 | Azure Databricks / SQL Warehouse | Source of approved offboarding consumption data | `DatabricksStatementRepository`, `DefaultAzureCredential`, Statement Execution API | Aligned |
 | Logical exposure model | Prevent physical Databricks coupling | `resource-definitions.json` with `model`, `contractVersion`, aliases and whitelists | Aligned |

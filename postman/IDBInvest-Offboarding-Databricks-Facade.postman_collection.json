@@ -35,6 +35,39 @@
       "name": "Health",
       "item": [
         {
+          "name": "Healthcheck",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-correlation-id",
+                "value": "{{correlationId}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "disabled": true
+              }
+            ],
+            "url": "{{baseUrl}}/offboarding/v1/healthcheck"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response is JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Healthcheck status is ok', function () { const body = pm.response.json(); pm.expect(body.status).to.eql('ok'); });",
+                  "pm.test('Databricks dependency is ok', function () { const body = pm.response.json(); pm.expect(body.databricks).to.eql('ok'); });",
+                  "pm.test('Correlation ID is returned', function () { pm.expect(pm.response.json().correlationId).to.be.a('string').and.not.empty; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Health check succeeds",
           "request": {
             "method": "GET",

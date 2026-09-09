@@ -178,7 +178,7 @@ When adding a resource, update the registry, unit tests, OpenAPI contract, Postm
 
 ## CI/CD
 
-`azure-pipelines.yml` is the Azure DevOps entry point and delegates validation, mandatory SonarQube analysis, build, tests/coverage, package validation, Function publish, and the controlled deployment handoff to the centralized `idbinvest/idbisupportnetcodevalidation` template. The deployment handoff targets the shared pipeline `422`.
+`azure-pipelines.yml` is the Azure DevOps entry point. A local `ContractValidation` stage validates JSON assets, OpenAPI, the APIM policy, and Bicep before the centralized `idbinvest/idbisupportnetcodevalidation` template performs mandatory SonarQube analysis, build, tests/coverage, package validation, Function publish, and the controlled deployment handoff to shared pipeline `422`. Configure `SONAR_PROJECT_KEY` as a pipeline variable and `SONAR_TOKEN` as a secret pipeline variable.
 
 Postman/Newman tests should execute after deployment to a DEV/test endpoint where the full APIM -> Function -> Databricks path is available.
 
@@ -191,6 +191,7 @@ Postman/Newman tests should execute after deployment to a DEV/test endpoint wher
 - [Security Model](docs/SECURITY.md)
 - [Testing Strategy](docs/TESTING.md)
 - [Operations Runbook](docs/OPERATIONS.md)
+- [Final Gap Assessment](docs/GAP_ASSESSMENT.md)
 - [Postman Functional Tests](postman/README.md)
 - [OpenAPI contract](api/openapi.yaml)
 

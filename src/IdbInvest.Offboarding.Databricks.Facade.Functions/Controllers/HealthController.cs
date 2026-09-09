@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using IdbInvest.Offboarding.Databricks.Facade.Core.Interfaces;
 using IdbInvest.Offboarding.Databricks.Facade.Functions.Http;
 using Microsoft.Azure.Functions.Worker;
@@ -29,6 +29,11 @@ public sealed class HealthController(IDatabricksRepository repository)
     [Function("OffboardingReadiness")]
     public Task<HttpResponseData> ReadyAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "offboarding/v1/health/ready")] HttpRequestData req,
+        CancellationToken cancellationToken) => DependencyHealthAsync(req, cancellationToken);
+
+    [Function("OffboardingHealthCheck")]
+    public Task<HttpResponseData> HealthCheckAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "offboarding/v1/healthcheck")] HttpRequestData req,
         CancellationToken cancellationToken) => DependencyHealthAsync(req, cancellationToken);
 
     [Function("OffboardingHealth")]

@@ -22,8 +22,10 @@ This runbook covers day-to-day operation of the Offboarding Databricks Facade ac
 Start with:
 
 ```http
-GET /offboarding/v1/health
+GET /offboarding/v1/healthcheck
 ```
+
+For platform probes, use `GET /offboarding/v1/health/live` for liveness and `GET /offboarding/v1/health/ready` for readiness. `/healthcheck` is the explicit end-to-end operational health endpoint and includes the Databricks dependency.
 
 Then verify the dependency chain in order:
 

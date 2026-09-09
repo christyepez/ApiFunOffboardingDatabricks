@@ -118,10 +118,17 @@ Example response:
 ## Health
 
 ```http
-GET /offboarding/v1/health
+GET /offboarding/v1/healthcheck
 ```
 
-The health endpoint verifies service availability and, depending on implementation/configuration, Databricks dependency reachability.
+`/healthcheck` is the explicit end-to-end operational health endpoint and verifies the Function plus Databricks dependency reachability. Platform probes may use:
+
+```http
+GET /offboarding/v1/health/live
+GET /offboarding/v1/health/ready
+```
+
+`/health` remains available as a backward-compatible dependency health alias.
 
 ## Error contract
 

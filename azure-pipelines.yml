@@ -1,12 +1,10 @@
 # =============================================================================
 # IDB Invest Offboarding - Databricks Facade Function App pipeline
 # =============================================================================
-# Delegates validation/build/test/Sonar/publish/deployment orchestration to the
-# centralized IDB Invest .NET validation template.
+# ContractValidation protects API/configuration assets that are specific to
+# Offboarding. The centralized template owns .NET/Sonar/tests/publish/deploy.
 #
-# Flow: CodeValidation -> central deployment pipeline (id 422).
-# APIM, networking and platform resources remain governed by the architecture;
-# this pipeline publishes the Offboarding Azure Function application package.
+# Flow: ContractValidation -> CodeValidation -> central deployment pipeline 422.
 # =============================================================================
 
 trigger:
@@ -16,15 +14,16 @@ trigger:
   paths:
     include:
       - src/**
+      - tests/**
+      - api/**
+      - deploy/**
+      - postman/**
       - "*.sln"
       - global.json
       - Directory.Build.props
       - azure-pipelines.yml
 
 pr: none
-
-# No root-level pool by design. The centralized template owns the validation
-# agent pool and uses the appropriate hosted agent for its REST deployment job.
 resources:
   repositories:
     - repository: net-validation
@@ -34,27 +33,50 @@ resources:
       ref: refs/heads/main
 
 stages:
+  - stage: ContractValidation
+    displayName: Validate API and deployment contracts
+    pool:
+      vmImage: ubuntu-latest
+    jobs:
+      - job: ValidateContracts
+        displayName: Validate OpenAPI, JSON, APIM and Bicep
+        steps:
+          - checkout: self
+          - script: |
+              node -e "['src/IdbInvest.Offboarding.Databricks.Facade.Functions/resource-definitions.json','postman/IDBInvest-Offboarding-Databricks-Facade.postman_collection.json','postman/local.postman_environment.json'].forEach(p=>JSON.parse(require('fs').readFileSync(p,'utf8'))); console.log('JSON assets: OK')"
+              npx --yes @redocly/cli lint api/openapi.yaml
+              python - <<'PY'
+              import xml.etree.ElementTree as ET
+              ET.parse('deploy/apim/inbound-policy.xml')
+              print('APIM policy XML: OK')
+              PY
+            displayName: Validate API contracts
+          - script: |
+              az bicep install
+              az bicep build --file deploy/infra/main.bicep
+              for f in deploy/infra/parameters/*.bicepparam; do
+                az bicep build-params --file "$f" --stdout >/dev/null
+                echo "$f: OK"
+              done
+            displayName: Validate Bicep contracts
+
   - template: pipelines/net-validate.yml@net-validation
     parameters:
       solutionOrProject: "IdbInvest.Offboarding.Databricks.Facade.sln"
       dotnetVersion: "10.x"
       coverageThreshold: 50
-      # SonarQube is mandatory in the centralized template.
-      # Replace this value with the real Offboarding SonarQube project key
-      # once the project is registered/confirmed in SonarQube.
-      sonarProjectKey: "REPLACE-WITH-OFFBOARDING-SONAR-PROJECT-KEY"
+      # Configure SONAR_PROJECT_KEY as an Azure DevOps pipeline variable.
+      # Configure SONAR_TOKEN as a secret pipeline variable.
+      sonarProjectKey: "$(SONAR_PROJECT_KEY)"
       projectToPublish: "src/IdbInvest.Offboarding.Databricks.Facade.Functions/IdbInvest.Offboarding.Databricks.Facade.Functions.csproj"
-
       deployPipelineId: "422"
       appType: "functionapp"
       appNameDev: "fn-np-d-idbinvest-offboarding-facade"
       resourceGroupDev: "rg-np-d-idbinvest-offboarding"
       deployDev: true
-
       appNameTest: "fn-np-t-idbinvest-offboarding-facade"
       resourceGroupTest: "rg-np-t-idbinvest-offboarding"
       deployTest: true
-
       # Production is prepared but intentionally disabled until the PROD
       # Function App and deployment approval path are confirmed.
       appNameProd: "fn-p-idbinvest-offboarding-facade"
