@@ -65,9 +65,9 @@ stages:
       solutionOrProject: "IdbInvest.Offboarding.Databricks.Facade.sln"
       dotnetVersion: "10.x"
       coverageThreshold: 50
-      # Configure SONAR_PROJECT_KEY as an Azure DevOps pipeline variable.
-      # Configure SONAR_TOKEN as a secret pipeline variable.
-      sonarProjectKey: "$(SONAR_PROJECT_KEY)"
+      # SonarQube project key for the Offboarding solution.
+      # SONAR_TOKEN remains a mandatory secret pipeline variable.
+      sonarProjectKey: "idbinvest_offboarding_solution"
       projectToPublish: "src/IdbInvest.Offboarding.Databricks.Facade.Functions/IdbInvest.Offboarding.Databricks.Facade.Functions.csproj"
       deployPipelineId: "422"
       appType: "functionapp"

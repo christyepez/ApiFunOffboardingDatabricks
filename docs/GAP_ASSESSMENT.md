@@ -32,7 +32,7 @@ The solution is a governed, read-only API. It exposes HR-approved offboarding ca
 
 These are not code gaps and must be supplied/authorized by the corporate environment:
 
-1. `SONAR_PROJECT_KEY` pipeline variable and secret `SONAR_TOKEN`.
+1. SonarQube project `idbinvest_offboarding_solution` must exist/allow analysis, and `SONAR_TOKEN` must be configured as a secret pipeline variable.
 2. Authorization of Bitbucket service connection `Bitbucket - oscarlo` for `idbinvest/idbisupportnetcodevalidation`.
 3. Azure DevOps cross-project permission to invoke deployment pipeline `422`.
 4. Function App Registration client ID/audience and APIM Managed Identity client ID.
