@@ -21,4 +21,4 @@ builder.Services.ConfigureFunctionsApplicationInsights();
 
 builder.UseMiddleware<ExceptionHandlingMiddleware>();
 
-builder.Build().Run();
+await builder.Build().RunAsync();
