@@ -11,6 +11,7 @@ trigger:
   branches:
     include:
       - main
+      - feature*
   paths:
     include:
       - src/**
@@ -67,7 +68,7 @@ stages:
       coverageThreshold: 50
       # SonarQube project key for the Offboarding solution.
       # SONAR_TOKEN remains a mandatory secret pipeline variable.
-      sonarProjectKey: "idbinvest_offboarding_solution"
+      sonarProjectKey: "Offboarding-Integration"
       projectToPublish: "src/IdbInvest.Offboarding.Databricks.Facade.Functions/IdbInvest.Offboarding.Databricks.Facade.Functions.csproj"
       deployPipelineId: "422"
       appType: "functionapp"
