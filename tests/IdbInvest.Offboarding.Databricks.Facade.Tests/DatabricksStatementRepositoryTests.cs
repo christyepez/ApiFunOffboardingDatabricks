@@ -203,6 +203,24 @@ public sealed class DatabricksStatementRepositoryTests
         await Assert.ThrowsAsync<DependencyUnavailableException>(() =>
             sut.QueryAsync(new QueryPlan("SELECT 1", [], ["employeeId"], 1, 10), CancellationToken.None));
     }
+    [Theory]
+    [InlineData("FAILED")]
+    [InlineData("CANCELED")]
+    [InlineData("CLOSED")]
+    public async Task QueryAsync_ThrowsWhenPollingEndsInTerminalFailureState(string state)
+    {
+        var handler = new SequenceHandler(
+            Json(HttpStatusCode.OK, """
+            {"statement_id":"stmt-terminal","status":{"state":"PENDING"}}
+            """),
+            Json(HttpStatusCode.OK, $"{{\"statement_id\":\"stmt-terminal\",\"status\":{{\"state\":\"{state}\"}}}}"));
+        var sut = Create(handler, maxChunks: 10, pollIntervalMilliseconds: 250);
+
+        var ex = await Assert.ThrowsAsync<DependencyUnavailableException>(() =>
+            sut.QueryAsync(new QueryPlan("SELECT 1", [], ["employeeId"], 1, 10), CancellationToken.None));
+
+        Assert.Contains(state, ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
     private static DatabricksStatementRepository Create(HttpMessageHandler handler, int maxChunks, int pollIntervalMilliseconds = 250)
     {
         var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.azuredatabricks.net") };

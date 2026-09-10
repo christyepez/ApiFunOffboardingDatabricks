@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Text.Json;
 using IdbInvest.Offboarding.Databricks.Facade.Core.DTO;
 using IdbInvest.Offboarding.Databricks.Facade.Core.Interfaces;
@@ -108,6 +108,60 @@ public sealed class FunctionControllerTests
         Assert.Contains("employee-offboarding-candidate", response.ReadBody(), StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task DynamicQuery_UsesDefaults_WhenOptionalQueryParametersAreMissing()
+    {
+        var service = new FakeQueryService();
+        var request = Request("https://localhost/api/offboarding/v1/employees");
+        var sut = new DynamicQueryController(service, NullLogger<DynamicQueryController>.Instance);
+
+        var response = (TestHttpResponseData)await sut.GetAsync(request, "employees", CancellationToken.None);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(service.LastRequest);
+        Assert.Equal(1, service.LastRequest!.Page);
+        Assert.Equal(100, service.LastRequest.PageSize);
+        Assert.False(service.LastRequest.IncludeTotal);
+    }
+
+    [Fact]
+    public async Task DynamicQuery_RejectsNonIntegerPage()
+    {
+        var service = new FakeQueryService();
+        var request = Request("https://localhost/api/offboarding/v1/employees?page=abc");
+        var sut = new DynamicQueryController(service, NullLogger<DynamicQueryController>.Instance);
+
+        var ex = await Assert.ThrowsAsync<IdbInvest.Offboarding.Databricks.Facade.Core.Exceptions.InvalidQueryException>(() =>
+            sut.GetAsync(request, "employees", CancellationToken.None));
+
+        Assert.Contains("page must be an integer", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task DynamicQuery_RejectsNonBooleanIncludeTotal()
+    {
+        var service = new FakeQueryService();
+        var request = Request("https://localhost/api/offboarding/v1/employees?includeTotal=maybe");
+        var sut = new DynamicQueryController(service, NullLogger<DynamicQueryController>.Instance);
+
+        var ex = await Assert.ThrowsAsync<IdbInvest.Offboarding.Databricks.Facade.Core.Exceptions.InvalidQueryException>(() =>
+            sut.GetAsync(request, "employees", CancellationToken.None));
+
+        Assert.Contains("includeTotal must be true or false", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CorporateHealth_ReplacesInvalidCorrelationId()
+    {
+        var request = Request("https://localhost/api/health", "invalid correlation id with spaces");
+        var sut = new HealthController(new FakeDatabricksRepository(true));
+
+        var response = (TestHttpResponseData)await sut.CorporateHealthAsync(request, CancellationToken.None);
+
+        var correlation = response.Headers.GetValues("x-correlation-id").Single();
+        Assert.NotEqual("invalid correlation id with spaces", correlation);
+        Assert.True(Guid.TryParse(correlation, out _));
+    }
     private static TestHttpRequestData Request(string url, string? correlationId = null)
     {
         var request = new TestHttpRequestData(url);

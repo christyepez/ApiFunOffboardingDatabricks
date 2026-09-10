@@ -123,4 +123,107 @@ public sealed class QueryBuilderExtendedTests
         Assert.DoesNotContain("OFFSET", plan.Sql, StringComparison.OrdinalIgnoreCase);
         Assert.Single(plan.Parameters);
     }
+    [Fact]
+    public void Build_RejectsEmptyExplicitFieldList()
+    {
+        var sut = new QueryBuilder();
+
+        Assert.Throws<InvalidQueryException>(() =>
+            sut.Build(Employees, new QueryRequestDto(",,", [], null, 1, 100, false)));
+    }
+
+    [Fact]
+    public void Build_RejectsSelectingNonSelectableField()
+    {
+        var sut = new QueryBuilder();
+
+        Assert.Throws<InvalidQueryException>(() =>
+            sut.Build(Employees, new QueryRequestDto("privateNote", [], null, 1, 100, false)));
+    }
+
+    [Theory]
+    [InlineData("updatedAt", "`updated_at` ASC")]
+    [InlineData("-updatedAt", "`updated_at` DESC")]
+    public void Build_MapsSortDirection(string sort, string expected)
+    {
+        var sut = new QueryBuilder();
+
+        var plan = sut.Build(Employees, new QueryRequestDto(null, [], sort, 1, 100, false));
+
+        Assert.Contains(expected, plan.Sql, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Build_RejectsUnsafeConfiguredSourceWithSinglePart()
+    {
+        var sut = new QueryBuilder();
+        var definition = Definition("unsafe");
+
+        Assert.Throws<InvalidOperationException>(() =>
+            sut.Build(definition, new QueryRequestDto(null, [], null, 1, 100, false)));
+    }
+
+    [Fact]
+    public void Build_RejectsUnsafeConfiguredSourceIdentifier()
+    {
+        var sut = new QueryBuilder();
+        var definition = Definition("gold.offboarding.bad-name");
+
+        Assert.Throws<InvalidOperationException>(() =>
+            sut.Build(definition, new QueryRequestDto(null, [], null, 1, 100, false)));
+    }
+
+    [Fact]
+    public void Build_AppliesDefaultSort_WhenCallerDoesNotProvideSort()
+    {
+        var sut = new QueryBuilder();
+        var definition = Definition(Employees.Source, defaultSort: "-updatedAt");
+
+        var plan = sut.Build(definition, new QueryRequestDto(null, [], null, 1, 100, false));
+
+        Assert.Contains("ORDER BY `updated_at` DESC", plan.Sql, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Build_DoesNotDuplicateDefaultSort_WhenCallerAlreadySortsSameField()
+    {
+        var sut = new QueryBuilder();
+        var definition = Definition(Employees.Source, defaultSort: "-updatedAt");
+
+        var plan = sut.Build(definition, new QueryRequestDto(null, [], "updatedAt", 1, 100, false));
+
+        Assert.Contains("ORDER BY `updated_at` ASC", plan.Sql, StringComparison.Ordinal);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(plan.Sql, "updated_at"));
+    }
+
+    [Fact]
+    public void Build_AppliesRequiredAndLookbackFilters()
+    {
+        var sut = new QueryBuilder();
+        var definition = Definition(
+            Employees.Source,
+            requiredFilters: [new RequiredFilterDefinition { Field = "status", Value = "OFFBOARDED" }],
+            lookback: new LookbackDefinition { Field = "updatedAt", Days = 30 });
+
+        var plan = sut.Build(definition, new QueryRequestDto(null, [], null, 1, 100, false));
+
+        Assert.Contains("`status` = :p0", plan.Sql, StringComparison.Ordinal);
+        Assert.Contains("`updated_at` >= :p1", plan.Sql, StringComparison.Ordinal);
+        Assert.Equal(2, plan.Parameters.Count);
+    }
+    private static ResourceDefinition Definition(
+        string source,
+        string? defaultSort = null,
+        IReadOnlyList<RequiredFilterDefinition>? requiredFilters = null,
+        LookbackDefinition? lookback = null) => new()
+    {
+        Name = Employees.Name,
+        Source = source,
+        MaxPageSize = Employees.MaxPageSize,
+        DefaultFields = Employees.DefaultFields,
+        DefaultSort = defaultSort,
+        RequiredFilters = requiredFilters ?? [],
+        Lookback = lookback,
+        Fields = Employees.Fields
+    };
 }
