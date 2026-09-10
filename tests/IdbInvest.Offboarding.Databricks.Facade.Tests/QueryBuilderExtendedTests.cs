@@ -1,4 +1,4 @@
-using IdbInvest.Offboarding.Databricks.Facade.Application.Query;
+﻿using IdbInvest.Offboarding.Databricks.Facade.Application.Query;
 using IdbInvest.Offboarding.Databricks.Facade.Core.DTO;
 using IdbInvest.Offboarding.Databricks.Facade.Core.Exceptions;
 using IdbInvest.Offboarding.Databricks.Facade.Core.Models;
@@ -193,7 +193,7 @@ public sealed class QueryBuilderExtendedTests
         var plan = sut.Build(definition, new QueryRequestDto(null, [], "updatedAt", 1, 100, false));
 
         Assert.Contains("ORDER BY `updated_at` ASC", plan.Sql, StringComparison.Ordinal);
-        Assert.Single(System.Text.RegularExpressions.Regex.Matches(plan.Sql, "updated_at"));
+        Assert.Equal(1, plan.Sql.Split("updated_at", StringSplitOptions.None).Length - 1);
     }
 
     [Fact]
@@ -227,3 +227,4 @@ public sealed class QueryBuilderExtendedTests
         Fields = Employees.Fields
     };
 }
+
