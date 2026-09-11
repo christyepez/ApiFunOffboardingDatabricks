@@ -16,7 +16,7 @@ public sealed class HealthEndpointContractTests
         Assert.NotNull(function);
         Assert.Equal("Health", function!.Name);
 
-        var parameter = method.GetParameters().First();
+        var parameter = method.GetParameters()[0];
         var trigger = parameter.GetCustomAttributes(inherit: false)
             .FirstOrDefault(x => x.GetType().Name == "HttpTriggerAttribute");
         Assert.NotNull(trigger);
@@ -35,7 +35,7 @@ public sealed class HealthEndpointContractTests
         Assert.NotNull(function);
         Assert.Equal("OffboardingHealthCheck", function!.Name);
 
-        var parameter = method.GetParameters().First();
+        var parameter = method.GetParameters()[0];
         var trigger = parameter.GetCustomAttributes(inherit: false)
             .FirstOrDefault(x => x.GetType().Name == "HttpTriggerAttribute");
         Assert.NotNull(trigger);

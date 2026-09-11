@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
@@ -11,8 +11,6 @@ namespace IdbInvest.Offboarding.Databricks.Facade.Tests;
 
 internal sealed class TestFunctionContext : FunctionContext
 {
-    private IServiceProvider _services;
-    private IDictionary<object, object> _items = new Dictionary<object, object>();
     private readonly TestInvocationFeatures _features = new();
 
     public TestFunctionContext()
@@ -20,7 +18,7 @@ internal sealed class TestFunctionContext : FunctionContext
         var services = new ServiceCollection();
         services.AddOptions<WorkerOptions>().Configure(options =>
             options.Serializer = new JsonObjectSerializer(new JsonSerializerOptions(JsonSerializerDefaults.Web)));
-        _services = services.BuildServiceProvider();
+        InstanceServices = services.BuildServiceProvider();
     }
 
     public override string InvocationId => "test-invocation";
@@ -28,9 +26,9 @@ internal sealed class TestFunctionContext : FunctionContext
     public override TraceContext TraceContext => null!;
     public override BindingContext BindingContext => null!;
     public override RetryContext RetryContext => null!;
-    public override IServiceProvider InstanceServices { get => _services; set => _services = value; }
+    public override IServiceProvider InstanceServices { get; set; }
     public override FunctionDefinition FunctionDefinition => null!;
-    public override IDictionary<object, object> Items { get => _items; set => _items = value; }
+    public override IDictionary<object, object> Items { get; set; } = new Dictionary<object, object>();
     public override IInvocationFeatures Features => _features;
 }
 
