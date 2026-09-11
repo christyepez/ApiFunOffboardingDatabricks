@@ -23,5 +23,6 @@
     <None Update="appsettings.json"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Update="resource-definitions.json"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Update="local.settings.sample.json"><CopyToOutputDirectory>Never</CopyToOutputDirectory></None>
+    <None Include="..\..\api\openapi.yaml" Link="openapi.yaml"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory><CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory></None>
   </ItemGroup>
 </Project>

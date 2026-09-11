@@ -480,3 +480,38 @@ Use this file to import the contract into Swagger Editor, API Management, Postma
 ## 15. Consumer responsibilities
 
 Consumers retrieve the governed offboarding population and execute their own internal business process. The API does not disable accounts, remove permissions, modify ACBS assignments, or execute downstream deprovisioning workflows.
+## Interactive Swagger UI
+
+The Azure Function package serves the canonical `api/openapi.yaml` contract at runtime and exposes an interactive Swagger UI. No second API contract is generated at runtime; the repository OpenAPI document remains the source of truth.
+
+Direct Function host endpoints:
+
+```text
+GET /api/swagger
+GET /api/swagger/index.html
+GET /api/openapi.yaml
+```
+
+DEV Function App example:
+
+```text
+https://fn-np-d-idbinvest-offboarding.azurewebsites.net/api/swagger
+https://fn-np-d-idbinvest-offboarding.azurewebsites.net/api/openapi.yaml
+```
+
+Availability still depends on the Function App networking and EasyAuth/APIM policy. The Swagger UI loads its UI assets from `cdn.jsdelivr.net`; browser access to that CDN is required. The OpenAPI document itself is served by the Function and does not depend on the CDN.
+
+### Using Authorize and Try it out
+
+1. Open `/api/swagger`.
+2. Select **Authorize**.
+3. Enter the bearer token expected by the API/APIM policy.
+4. Choose an operation and select **Try it out**.
+5. Set the `apim-host` server variable to the DEV APIM hostname when the operation should be executed through API Management.
+6. Execute the request and inspect status, headers, response body, and examples.
+
+The UI sets `persistAuthorization` to `false`, so bearer credentials are not intentionally persisted by Swagger UI between browser sessions.
+
+### Production guidance
+
+Swagger endpoints are documentation endpoints, not business endpoints. If production access is enabled later, publish them only through the approved network/authentication policy. Do not expose secrets, physical Databricks credentials, PATs, or internal connection strings in the OpenAPI document.

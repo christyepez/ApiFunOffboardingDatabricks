@@ -68,3 +68,20 @@ Negative contract tests
 ```
 
 See `docs/API_REFERENCE.md` for the full API usage guide.
+## Swagger / OpenAPI runtime documentation
+
+When running the Function directly, interactive API documentation is available at:
+
+```text
+{{FunctionHost}}/api/swagger
+{{FunctionHost}}/api/swagger/index.html
+{{FunctionHost}}/api/openapi.yaml
+```
+
+For DEV, the default Function App hostname is expected to be:
+
+```text
+https://fn-np-d-idbinvest-offboarding.azurewebsites.net/api/swagger
+```
+
+The Swagger UI can use **Authorize** with the bearer token and **Try it out** for interactive calls. When testing through APIM, configure the OpenAPI server variable with the DEV APIM hostname.
