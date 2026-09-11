@@ -221,6 +221,147 @@ public sealed class DatabricksStatementRepositoryTests
 
         Assert.Contains(state, ex.Message, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Theory]
+    [InlineData("", "warehouse")]
+    [InlineData("not-a-uri", "warehouse")]
+    [InlineData("https://example.azuredatabricks.net", "")]
+    [InlineData("https://example.azuredatabricks.net", "<warehouse-id>")]
+    public async Task QueryAsync_RejectsInvalidHostOrWarehouse(string host, string warehouseId)
+    {
+        var sut = CreateWithOptions(new SequenceHandler(), host, warehouseId, 5, 250, 5, 10);
+
+        await Assert.ThrowsAsync<DependencyUnavailableException>(() =>
+            sut.QueryAsync(new QueryPlan("SELECT 1", [], ["employeeId"], 1, 10), CancellationToken.None));
+    }
+
+    [Theory]
+    [InlineData(0, 250, 5, 10)]
+    [InlineData(51, 250, 5, 10)]
+    [InlineData(5, 249, 5, 10)]
+    [InlineData(5, 10001, 5, 10)]
+    [InlineData(5, 250, 0, 10)]
+    [InlineData(5, 250, 301, 10)]
+    [InlineData(5, 250, 5, 0)]
+    [InlineData(5, 250, 5, 10001)]
+    public async Task QueryAsync_RejectsOutOfRangeRuntimeOptions(int waitSeconds, int pollMs, int maxPollSeconds, int maxChunks)
+    {
+        var sut = CreateWithOptions(new SequenceHandler(), "https://example.azuredatabricks.net", "warehouse", waitSeconds, pollMs, maxPollSeconds, maxChunks);
+
+        await Assert.ThrowsAsync<DependencyUnavailableException>(() =>
+            sut.QueryAsync(new QueryPlan("SELECT 1", [], ["employeeId"], 1, 10), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task QueryAsync_RejectsEmptyStatementResponse()
+    {
+        var handler = new SequenceHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("null", Encoding.UTF8, "application/json")
+        });
+        var sut = Create(handler, 10);
+
+        await Assert.ThrowsAsync<DependencyUnavailableException>(() =>
+            sut.QueryAsync(new QueryPlan("SELECT 1", [], ["employeeId"], 1, 10), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task QueryAsync_RejectsPollingHttpFailure()
+    {
+        var handler = new SequenceHandler(
+            Json(HttpStatusCode.OK, "{\"statement_id\":\"stmt-poll\",\"status\":{\"state\":\"PENDING\"}}"),
+            Json(HttpStatusCode.BadGateway, "{}"));
+        var sut = Create(handler, 10, 250);
+
+        var ex = await Assert.ThrowsAsync<DependencyUnavailableException>(() =>
+            sut.QueryAsync(new QueryPlan("SELECT 1", [], ["employeeId"], 1, 10), CancellationToken.None));
+
+        Assert.Contains("polling failed", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task QueryAsync_RejectsEmptyPollingResponse()
+    {
+        var handler = new SequenceHandler(
+            Json(HttpStatusCode.OK, "{\"statement_id\":\"stmt-poll\",\"status\":{\"state\":\"PENDING\"}}"),
+            new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("null", Encoding.UTF8, "application/json") });
+        var sut = Create(handler, 10, 250);
+
+        var ex = await Assert.ThrowsAsync<DependencyUnavailableException>(() =>
+            sut.QueryAsync(new QueryPlan("SELECT 1", [], ["employeeId"], 1, 10), CancellationToken.None));
+
+        Assert.Contains("polling returned an empty response", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task QueryAsync_RejectsChunkHttpFailure()
+    {
+        var handler = new SequenceHandler(
+            Json(HttpStatusCode.OK, "{\"statement_id\":\"stmt-chunk\",\"status\":{\"state\":\"SUCCEEDED\"},\"manifest\":{\"schema\":{\"columns\":[{\"name\":\"employeeId\"}]}},\"result\":{\"data_array\":[[\"E1\"]],\"next_chunk_index\":1}}"),
+            Json(HttpStatusCode.InternalServerError, "{}"));
+        var sut = Create(handler, 10);
+
+        var ex = await Assert.ThrowsAsync<DependencyUnavailableException>(() =>
+            sut.QueryAsync(new QueryPlan("SELECT 1", [], ["employeeId"], 1, 10), CancellationToken.None));
+
+        Assert.Contains("chunk 1", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task QueryAsync_RejectsEmptyChunkResponse()
+    {
+        var handler = new SequenceHandler(
+            Json(HttpStatusCode.OK, "{\"statement_id\":\"stmt-chunk\",\"status\":{\"state\":\"SUCCEEDED\"},\"manifest\":{\"schema\":{\"columns\":[{\"name\":\"employeeId\"}]}},\"result\":{\"data_array\":[[\"E1\"]],\"next_chunk_index\":1}}"),
+            new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("null", Encoding.UTF8, "application/json") });
+        var sut = Create(handler, 10);
+
+        var ex = await Assert.ThrowsAsync<DependencyUnavailableException>(() =>
+            sut.QueryAsync(new QueryPlan("SELECT 1", [], ["employeeId"], 1, 10), CancellationToken.None));
+
+        Assert.Contains("empty response", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task QueryAsync_NormalizesJsonPrimitiveTypesAndMissingCells()
+    {
+        var handler = new SequenceHandler(Json(HttpStatusCode.OK, """
+        {
+          "statement_id":"stmt-types",
+          "status":{"state":"SUCCEEDED"},
+          "manifest":{"schema":{"columns":[{"name":"s"},{"name":"i"},{"name":"d"},{"name":"t"},{"name":"f"},{"name":"n"},{"name":"missing"}]}},
+          "result":{"data_array":[["text",42,12.5,true,false,null]]}
+        }
+        """));
+        var sut = Create(handler, 10);
+
+        var result = await sut.QueryAsync(new QueryPlan("SELECT 1", [], ["s"], 1, 10), CancellationToken.None);
+
+        var row = Assert.Single(result.Rows);
+        Assert.Equal("text", row["s"]);
+        Assert.Equal(42L, row["i"]);
+        Assert.Equal(12.5m, row["d"]);
+        Assert.Equal(true, row["t"]);
+        Assert.Equal(false, row["f"]);
+        Assert.Null(row["n"]);
+        Assert.Null(row["missing"]);
+    }
+
+    [Fact]
+    public async Task CountAsync_ParsesNumericJsonElement()
+    {
+        var handler = new SequenceHandler(Json(HttpStatusCode.OK, """
+        {
+          "statement_id":"stmt-count-number",
+          "status":{"state":"SUCCEEDED"},
+          "result":{"data_array":[[42]]}
+        }
+        """));
+        var sut = Create(handler, 10);
+
+        var total = await sut.CountAsync(new CountQueryPlan("SELECT COUNT(1)", []), CancellationToken.None);
+
+        Assert.Equal(42L, total);
+    }
     private static DatabricksStatementRepository Create(HttpMessageHandler handler, int maxChunks, int pollIntervalMilliseconds = 250)
     {
         var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.azuredatabricks.net") };
@@ -236,6 +377,28 @@ public sealed class DatabricksStatementRepositoryTests
         return new DatabricksStatementRepository(client, new FakeTokenProvider(), options, NullLogger<DatabricksStatementRepository>.Instance);
     }
 
+
+    private static DatabricksStatementRepository CreateWithOptions(
+        HttpMessageHandler handler,
+        string host,
+        string warehouseId,
+        int waitTimeoutSeconds,
+        int pollIntervalMilliseconds,
+        int maxPollSeconds,
+        int maxResultChunks)
+    {
+        var options = Options.Create(new DatabricksOptions
+        {
+            Host = host,
+            WarehouseId = warehouseId,
+            WaitTimeoutSeconds = waitTimeoutSeconds,
+            PollIntervalMilliseconds = pollIntervalMilliseconds,
+            MaxPollSeconds = maxPollSeconds,
+            MaxResultChunks = maxResultChunks
+        });
+        var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.azuredatabricks.net") };
+        return new DatabricksStatementRepository(client, new FakeTokenProvider(), options, NullLogger<DatabricksStatementRepository>.Instance);
+    }
     private static HttpResponseMessage Json(HttpStatusCode status, string json) => new(status)
     {
         Content = new StringContent(json, Encoding.UTF8, "application/json")
