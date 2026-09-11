@@ -13,7 +13,7 @@ public sealed class DefaultAzureCredentialDatabricksTokenProvider : IDatabricksT
     public DefaultAzureCredentialDatabricksTokenProvider(IOptions<DatabricksOptions> options) => _options = options.Value;
     public async Task<string> GetTokenAsync(CancellationToken cancellationToken)
     {
-        var token = await _credential.GetTokenAsync(new TokenRequestContext([_options.OAuthScope]), cancellationToken);
+        var token = await _credential.GetTokenAsync(new TokenRequestContext([_options.ResourceScope]), cancellationToken);
         return token.Token;
     }
 }
