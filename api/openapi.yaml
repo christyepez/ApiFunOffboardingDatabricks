@@ -2,103 +2,258 @@ openapi: 3.0.3
 info:
   title: Offboarding Data Exposure API
   version: 1.0.0
+  description: |
+    Read-only governed API that exposes HR-approved offboarding candidates from curated Databricks Gold views.
+    Consumer systems own their downstream deprovisioning processes.
   license:
     name: Proprietary
     url: https://www.idbinvest.org/en
-  description: Read-only governed API that exposes HR-approved offboarding candidates from approved Databricks Gold views. Consumer systems own their internal deprovisioning processes.
-security:
-  - bearerAuth: []
 servers:
   - url: https://{apim-host}/offboarding/v1
+    description: IDB Invest API Management endpoint
     variables:
-      apim-host: { default: api.example.com }
+      apim-host:
+        default: api.example.com
+        description: Replace with the confirmed gateway host for the target environment.
+security:
+  - bearerAuth: []
 paths:
   /{resource}:
     get:
       summary: Query an exposed offboarding resource
+      description: |
+        Returns the logical offboarding contract. Mandatory eligibility rules are applied server-side.
+        Consumer filters can only further restrict the eligible population.
       operationId: queryResource
       parameters:
-        - { name: resource, in: path, required: true, schema: { type: string } }
-        - { name: fields, in: query, schema: { type: string }, description: Comma-separated selectable public field names. }
-        - { name: filter, in: query, schema: { type: array, items: { type: string } }, style: form, explode: true, description: "Additional consumer filters in field:operator:value format. Server-enforced eligibility filters cannot be removed." }
-        - { name: sort, in: query, schema: { type: string }, description: Comma-separated sortable fields; prefix with - for descending. }
-        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
-        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 1000, default: 100 } }
-        - { name: includeTotal, in: query, schema: { type: boolean, default: false } }
-        - { name: x-correlation-id, in: header, schema: { type: string, maxLength: 128, pattern: '^[A-Za-z0-9._:-]+$' } }
+        - name: resource
+          in: path
+          required: true
+          schema:
+            type: string
+            example: employees
+        - name: fields
+          in: query
+          required: false
+          description: Comma-separated public selectable fields.
+          schema:
+            type: string
+            example: employeeId,fullName,email,status,department,country,terminationDate,updatedAt
+        - name: filter
+          in: query
+          required: false
+          description: Repeatable field:operator:value consumer filter.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              example: status:eq:OFFBOARDED
+        - name: sort
+          in: query
+          required: false
+          description: Comma-separated sortable fields. Prefix with - for descending.
+          schema:
+            type: string
+            example: -terminationDate,employeeId
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+            example: 100
+        - name: includeTotal
+          in: query
+          required: false
+          description: Executes an additional count query when true.
+          schema:
+            type: boolean
+            default: false
+            example: false
+        - name: x-correlation-id
+          in: header
+          required: false
+          schema:
+            type: string
+            maxLength: 128
+            pattern: '^[A-Za-z0-9._:-]+$'
+            example: postman-query-001
       responses:
         '200':
           description: Governed query result
+          headers:
+            x-correlation-id:
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+                example: no-store
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/QueryResponse' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { description: Unauthorized }
-        '403': { description: Forbidden }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '429': { description: Rate limited }
-        '503': { $ref: '#/components/responses/DependencyUnavailable' }
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+              example:
+                data:
+                  - employeeId: '12345'
+                    fullName: Example User
+                    email: example.user@iadb.org
+                    status: OFFBOARDED
+                    department: Finance
+                    country: US
+                    terminationDate: '2026-09-01'
+                    updatedAt: '2026-09-10T15:10:00Z'
+                meta:
+                  resource: employees
+                  model: employee-offboarding-candidate
+                  contractVersion: '1.0'
+                  page: 1
+                  pageSize: 100
+                  returned: 1
+                  total: null
+                  hasMore: false
+                  correlationId: postman-query-001
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          description: Rate limited by API Management
+        '503':
+          $ref: '#/components/responses/DependencyUnavailable'
   /resources/{resource}/metadata:
     get:
-      summary: Get logical contract metadata for a resource
+      summary: Get logical resource metadata
       operationId: resourceMetadata
       parameters:
-        - { name: resource, in: path, required: true, schema: { type: string } }
+        - name: resource
+          in: path
+          required: true
+          schema:
+            type: string
+            example: employees
+        - name: x-correlation-id
+          in: header
+          required: false
+          schema:
+            type: string
+            example: postman-metadata-001
       responses:
         '200':
-          description: Allowed public fields and capabilities
+          description: Public field whitelist and capabilities
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ResourceMetadata' }
-        '401': { description: Unauthorized }
-        '403': { description: Forbidden }
-        '404': { $ref: '#/components/responses/NotFound' }
+              schema:
+                $ref: '#/components/schemas/ResourceMetadata'
+              example:
+                resource: employees
+                model: employee-offboarding-candidate
+                contractVersion: '1.0'
+                fields:
+                  - name: employeeId
+                    type: STRING
+                    filterable: true
+                    sortable: true
+                    selectable: true
+                  - name: email
+                    type: STRING
+                    filterable: true
+                    sortable: false
+                    selectable: true
+                maxPageSize: 1000
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          $ref: '#/components/responses/NotFound'
   /health/live:
     get:
-      summary: Check service liveness without dependency calls
+      summary: Check service liveness without Databricks dependency calls
       operationId: liveness
       responses:
         '200':
           description: Service process is alive
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/LivenessResponse' }
-        '401': { description: Unauthorized }
-        '403': { description: Forbidden }
+              schema:
+                $ref: '#/components/schemas/LivenessResponse'
+              example:
+                status: ok
+                service: Offboarding.Databricks.Facade
+                correlationId: health-live-001
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
   /health/ready:
     get:
-      summary: Check service readiness including Databricks dependency
+      summary: Check service readiness including Databricks
       operationId: readiness
       responses:
         '200':
           description: Service and Databricks are ready
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/HealthResponse' }
-        '401': { description: Unauthorized }
-        '403': { description: Forbidden }
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: ok
+                service: Offboarding.Databricks.Facade
+                databricks: ok
+                correlationId: health-ready-001
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
         '503':
-          description: Databricks dependency degraded
+          description: Databricks dependency unavailable
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/HealthResponse' }
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: degraded
+                service: Offboarding.Databricks.Facade
+                databricks: unavailable
+                correlationId: health-ready-002
   /healthcheck:
     get:
-      summary: Check end-to-end API health including Databricks dependency
+      summary: Check end-to-end API health including Databricks
       operationId: healthcheck
       responses:
         '200':
           description: Healthy
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/HealthResponse' }
-        '401': { description: Unauthorized }
-        '403': { description: Forbidden }
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
         '503':
           description: Dependency degraded
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/HealthResponse' }
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
   /health:
     get:
       summary: Check API and Databricks dependency health
@@ -108,36 +263,63 @@ paths:
           description: Healthy
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/HealthResponse' }
-        '401': { description: Unauthorized }
-        '403': { description: Forbidden }
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
         '503':
           description: Dependency degraded
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/HealthResponse' }
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+      description: Microsoft Entra ID access token validated by API Management.
   responses:
     BadRequest:
       description: Invalid query
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/ApiError' }
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          examples:
+            invalidField:
+              value:
+                code: INVALID_QUERY
+                message: Field 'password' is not selectable for resource 'employees'.
+                correlationId: postman-error-001
+            invalidPage:
+              value:
+                code: INVALID_QUERY
+                message: page must be an integer.
+                correlationId: postman-error-002
     NotFound:
       description: Resource not exposed
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/ApiError' }
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            code: RESOURCE_NOT_FOUND
+            message: Resource was not found.
+            correlationId: postman-error-003
     DependencyUnavailable:
       description: Databricks dependency unavailable
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/ApiError' }
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            code: DEPENDENCY_UNAVAILABLE
+            message: Databricks dependency is unavailable.
+            correlationId: postman-error-004
   schemas:
     QueryResponse:
       type: object
@@ -154,54 +336,121 @@ components:
       type: object
       required: [resource, model, contractVersion, page, pageSize, returned, hasMore, correlationId]
       properties:
-        resource: { type: string, example: employees }
-        model: { type: string, example: employee-offboarding-candidate }
-        contractVersion: { type: string, example: '1.0' }
-        page: { type: integer, minimum: 1 }
-        pageSize: { type: integer, minimum: 1 }
-        returned: { type: integer, minimum: 0 }
-        total: { type: integer, format: int64, nullable: true, minimum: 0 }
-        hasMore: { type: boolean }
-        correlationId: { type: string }
+        resource:
+          type: string
+          example: employees
+        model:
+          type: string
+          example: employee-offboarding-candidate
+        contractVersion:
+          type: string
+          example: '1.0'
+        page:
+          type: integer
+          minimum: 1
+          example: 1
+        pageSize:
+          type: integer
+          minimum: 1
+          example: 100
+        returned:
+          type: integer
+          minimum: 0
+          example: 1
+        total:
+          type: integer
+          format: int64
+          nullable: true
+          minimum: 0
+          example: 1
+        hasMore:
+          type: boolean
+          example: false
+        correlationId:
+          type: string
+          example: postman-query-001
     ResourceMetadata:
       type: object
       required: [resource, model, contractVersion, fields, maxPageSize]
       properties:
-        resource: { type: string }
-        model: { type: string }
-        contractVersion: { type: string }
+        resource:
+          type: string
+          example: employees
+        model:
+          type: string
+          example: employee-offboarding-candidate
+        contractVersion:
+          type: string
+          example: '1.0'
         fields:
           type: array
-          items: { $ref: '#/components/schemas/FieldMetadata' }
-        maxPageSize: { type: integer, minimum: 1 }
+          items:
+            $ref: '#/components/schemas/FieldMetadata'
+        maxPageSize:
+          type: integer
+          minimum: 1
+          example: 1000
     FieldMetadata:
       type: object
       required: [name, type, filterable, sortable, selectable]
       properties:
-        name: { type: string }
-        type: { type: string }
-        filterable: { type: boolean }
-        sortable: { type: boolean }
-        selectable: { type: boolean }
+        name:
+          type: string
+          example: employeeId
+        type:
+          type: string
+          example: STRING
+        filterable:
+          type: boolean
+          example: true
+        sortable:
+          type: boolean
+          example: true
+        selectable:
+          type: boolean
+          example: true
     ApiError:
       type: object
       required: [code, message, correlationId]
       properties:
-        code: { type: string }
-        message: { type: string }
-        correlationId: { type: string }
+        code:
+          type: string
+          example: INVALID_QUERY
+        message:
+          type: string
+          example: Invalid request.
+        correlationId:
+          type: string
+          example: postman-error-001
     LivenessResponse:
       type: object
       required: [status, service, correlationId]
       properties:
-        status: { type: string, enum: [ok] }
-        service: { type: string }
-        correlationId: { type: string }
+        status:
+          type: string
+          enum: [ok]
+          example: ok
+        service:
+          type: string
+          example: Offboarding.Databricks.Facade
+        correlationId:
+          type: string
+          example: health-live-001
     HealthResponse:
       type: object
       required: [status, service, databricks, correlationId]
       properties:
-        status: { type: string, enum: [ok, degraded] }
-        service: { type: string }
-        databricks: { type: string, enum: [ok, unavailable] }
-        correlationId: { type: string }
+        status:
+          type: string
+          enum: [ok, degraded]
+          example: ok
+        service:
+          type: string
+          example: Offboarding.Databricks.Facade
+        databricks:
+          type: string
+          enum: [ok, unavailable]
+          example: ok
+        correlationId:
+          type: string
+          example: health-ready-001

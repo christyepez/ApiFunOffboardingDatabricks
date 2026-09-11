@@ -1,58 +1,70 @@
-# Postman Functional Tests
-
-English is the default language for all test names, assertions, console messages, and documentation in this repository.
+# Postman - Offboarding Data Exposure API
 
 ## Files
 
-- `IDBInvest_Offboarding_Postman_Collection.json`: functional and contract test collection.
-- `local.postman_environment.json`: local environment template.
+- `IDBInvest_Offboarding_Postman_Collection.json` - functional and contract test collection.
+- `local.postman_environment.json` - local Azure Functions environment.
+- `dev-apim.postman_environment.json` - DEV API Management environment template.
 
-## Coverage
+## Local execution
 
-The collection validates:
-
-- health endpoint availability;
-- metadata contract;
-- dynamic query contract;
-- pagination metadata;
-- correlation identifiers;
-- rejection of unknown fields;
-- rejection of page sizes above the configured resource limit;
-- unknown resource handling;
-- prevention of physical Databricks identifiers leaking through the public contract.
-
-## Run in Postman
-
-1. Start the Azure Functions host locally.
-2. Import the collection and local environment.
+1. Import the collection.
+2. Import `local.postman_environment.json`.
 3. Select `Offboarding Databricks Facade - Local`.
-4. If Function authorization is enabled, set `functionKey`.
-5. If APIM/Entra authentication is under test, set `accessToken` and enable the Authorization header for the applicable requests.
-6. Run the complete collection.
+4. Start with `Health / Liveness`.
+5. Run `Metadata / Employee metadata contract`.
+6. Run the Dynamic Query requests.
 
-## Run with Newman
+Local base URL:
 
-Install Newman:
-
-```bash
-npm install -g newman
+```text
+http://localhost:7071/api
 ```
 
-Run:
+## DEV through APIM
 
-```bash
-newman run postman/IDBInvest_Offboarding_Postman_Collection.json \
-  -e postman/local.postman_environment.json \
-  --reporters cli,junit \
-  --reporter-junit-export TestResults/postman-results.xml
+1. Import `dev-apim.postman_environment.json`.
+2. Select `Offboarding Databricks Facade - DEV APIM`.
+3. Replace:
+
+```text
+baseUrl = https://<apim-host>
 ```
 
-For a deployed environment, override `baseUrl` without changing the collection:
+with the confirmed DEV APIM gateway base URL.
+4. Put the Microsoft Entra ID token in:
 
-```bash
-newman run postman/IDBInvest_Offboarding_Postman_Collection.json \
-  --env-var baseUrl=https://<apim-host>/<api-base-path> \
-  --env-var accessToken=<token>
+```text
+accessToken
 ```
 
-Do not commit access tokens, Function keys, PATs, or client secrets into Postman environments.
+5. Enable the bearer header for requests protected by APIM if it is disabled in the collection.
+
+Do not store long-lived tokens or secrets in source control.
+
+## Key variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `resource` | `employees` | Logical resource. |
+| `fields` | all current public employee fields | Projection. |
+| `filter` | `status:eq:OFFBOARDED` | Consumer filter example. Mandatory eligibility is still enforced server-side. |
+| `sort` | `-terminationDate,employeeId` | Deterministic sorting example. |
+| `page` | `1` | 1-based page. |
+| `pageSize` | `100` | Page size. |
+| `includeTotal` | `false` | Optional count query. |
+| `accessToken` | empty | Entra bearer token for APIM. |
+
+## Recommended order
+
+```text
+Health / Liveness
+Health / Readiness
+Metadata / Employee metadata contract
+Dynamic Query / Query employees with defaults
+Dynamic Query / Query employees with filters and paging
+Dynamic Query / Query employees with multiple filters
+Negative contract tests
+```
+
+See `docs/API_REFERENCE.md` for the full API usage guide.
