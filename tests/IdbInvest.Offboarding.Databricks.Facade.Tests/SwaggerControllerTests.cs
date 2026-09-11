@@ -16,9 +16,7 @@ public sealed class SwaggerControllerTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("text/html", response.Headers.GetValues("Content-Type").Single(), StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("SwaggerUIBundle", response.ReadBody(), StringComparison.Ordinal);
-        Assert.Contains("/openapi.yaml", response.ReadBody(), StringComparison.Ordinal);
-        Assert.Contains("replace(/\\/swagger(?:\\/index\\.html)?$/", response.ReadBody(), StringComparison.Ordinal);
+        Assert.Contains("/api/swagger/init.js", response.ReadBody(), StringComparison.Ordinal);
         Assert.Equal("no-store", response.Headers.GetValues("Cache-Control").Single());
     }
 
@@ -31,9 +29,24 @@ public sealed class SwaggerControllerTests
         var response = (TestHttpResponseData)await sut.SwaggerIndexAsync(request, CancellationToken.None);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("SwaggerUIBundle", response.ReadBody(), StringComparison.Ordinal);
+        Assert.Contains("/api/swagger/init.js", response.ReadBody(), StringComparison.Ordinal);
     }
 
+
+    [Fact]
+    public async Task SwaggerInitializer_ReturnsExternalInitializationScript()
+    {
+        var sut = CreateController();
+        var request = new TestHttpRequestData("https://localhost/api/swagger/init.js");
+
+        var response = (TestHttpResponseData)await sut.SwaggerInitializerAsync(request, CancellationToken.None);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("application/javascript", response.Headers.GetValues("Content-Type").Single(), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("SwaggerUIBundle", response.ReadBody(), StringComparison.Ordinal);
+        Assert.Contains("/openapi.yaml", response.ReadBody(), StringComparison.Ordinal);
+        Assert.DoesNotContain("unsafe-inline", response.ReadBody(), StringComparison.OrdinalIgnoreCase);
+    }
     [Fact]
     public async Task OpenApi_ReturnsYamlDocument()
     {
@@ -87,7 +100,7 @@ public sealed class SwaggerControllerTests
         {
             ["SwaggerUi:StylesheetUrl"] = "/swagger-ui.css",
             ["SwaggerUi:BundleUrl"] = "/swagger-ui-bundle.js",
-            ["SwaggerUi:ContentSecurityPolicy"] = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src data:; connect-src 'self'; font-src 'self' data:"
+            ["SwaggerUi:ContentSecurityPolicy"] = "default-src 'none'; script-src 'self'; style-src 'self'; img-src data:; connect-src 'self'; font-src 'self' data:"
         };
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(settings)

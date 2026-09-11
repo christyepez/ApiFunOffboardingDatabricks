@@ -11,6 +11,19 @@ public sealed class SwaggerController(IConfiguration configuration)
     private readonly string _bundleUrl = configuration.GetRequiredSection("SwaggerUi:BundleUrl").Value!;
     private readonly string _contentSecurityPolicy = configuration.GetRequiredSection("SwaggerUi:ContentSecurityPolicy").Value!;
 
+    private const string SwaggerInitializer = """
+window.onload = () => {
+  SwaggerUIBundle({
+    url: window.location.pathname.replace(/\/swagger(?:\/index\.html)?$/, '/openapi.yaml'),
+    dom_id: '#swagger-ui',
+    deepLinking: true,
+    displayRequestDuration: true,
+    persistAuthorization: false,
+    tryItOutEnabled: true
+  });
+};
+""";
+
     [Function("SwaggerUi")]
     public Task<HttpResponseData> SwaggerAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "swagger")] HttpRequestData req,
@@ -22,6 +35,19 @@ public sealed class SwaggerController(IConfiguration configuration)
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "swagger/index.html")] HttpRequestData req,
         CancellationToken cancellationToken)
         => CreateSwaggerResponseAsync(req, cancellationToken);
+
+    [Function("SwaggerInitializer")]
+    public async Task<HttpResponseData> SwaggerInitializerAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "swagger/init.js")] HttpRequestData req,
+        CancellationToken cancellationToken)
+    {
+        var response = req.CreateResponse(HttpStatusCode.OK);
+        response.Headers.Add("Content-Type", "application/javascript; charset=utf-8");
+        response.Headers.Add("Cache-Control", "no-store");
+        response.Headers.Add("X-Content-Type-Options", "nosniff");
+        await response.WriteStringAsync(SwaggerInitializer, cancellationToken);
+        return response;
+    }
 
     [Function("OpenApiDocument")]
     public async Task<HttpResponseData> OpenApiAsync(
@@ -52,11 +78,19 @@ public sealed class SwaggerController(IConfiguration configuration)
         response.Headers.Add("Cache-Control", "no-store");
         response.Headers.Add("X-Content-Type-Options", "nosniff");
         response.Headers.Add("Content-Security-Policy", _contentSecurityPolicy);
-        await response.WriteStringAsync(CreateSwaggerHtml(), cancellationToken);
+        await response.WriteStringAsync(CreateSwaggerHtml(req), cancellationToken);
         return response;
     }
 
-    private string CreateSwaggerHtml() => $$"""
+    private string CreateSwaggerHtml(HttpRequestData req)
+    {
+        var path = req.Url.AbsolutePath;
+        var swaggerBasePath = path.EndsWith("/index.html", StringComparison.OrdinalIgnoreCase)
+            ? path[..^"/index.html".Length]
+            : path.TrimEnd('/');
+        var initializerPath = $"{swaggerBasePath}/init.js";
+
+        return $$"""
 <!doctype html>
 <html lang="en">
 <head>
@@ -64,24 +98,13 @@ public sealed class SwaggerController(IConfiguration configuration)
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>IDB Invest Offboarding API - Swagger</title>
   <link rel="stylesheet" href="{{_stylesheetUrl}}" />
-  <style>body{margin:0;background:#fafafa}.topbar{display:none}</style>
 </head>
 <body>
   <div id="swagger-ui"></div>
   <script src="{{_bundleUrl}}"></script>
-  <script>
-    window.onload = () => {
-      SwaggerUIBundle({
-        url: window.location.pathname.replace(/\/swagger(?:\/index\.html)?$/, '/openapi.yaml'),
-        dom_id: '#swagger-ui',
-        deepLinking: true,
-        displayRequestDuration: true,
-        persistAuthorization: false,
-        tryItOutEnabled: true
-      });
-    };
-  </script>
+  <script src="{{initializerPath}}"></script>
 </body>
 </html>
 """;
+    }
 }
