@@ -1,5 +1,6 @@
 using System.Net;
 using IdbInvest.Offboarding.Databricks.Facade.Functions.Controllers;
+using Microsoft.Extensions.Configuration;
 
 namespace IdbInvest.Offboarding.Databricks.Facade.Tests;
 
@@ -8,7 +9,7 @@ public sealed class SwaggerControllerTests
     [Fact]
     public async Task Swagger_ReturnsInteractiveHtml()
     {
-        var sut = new SwaggerController();
+        var sut = CreateController();
         var request = new TestHttpRequestData("https://localhost/api/swagger");
 
         var response = (TestHttpResponseData)await sut.SwaggerAsync(request, CancellationToken.None);
@@ -24,7 +25,7 @@ public sealed class SwaggerControllerTests
     [Fact]
     public async Task SwaggerIndex_ReturnsInteractiveHtml()
     {
-        var sut = new SwaggerController();
+        var sut = CreateController();
         var request = new TestHttpRequestData("https://localhost/api/swagger/index.html");
 
         var response = (TestHttpResponseData)await sut.SwaggerIndexAsync(request, CancellationToken.None);
@@ -41,7 +42,7 @@ public sealed class SwaggerControllerTests
         try
         {
             await File.WriteAllTextAsync(target, "openapi: 3.0.3\ninfo:\n  title: Test API\n  version: 1.0.0\npaths: {}\n");
-            var sut = new SwaggerController();
+            var sut = CreateController();
             var request = new TestHttpRequestData("https://localhost/api/openapi.yaml");
 
             var response = (TestHttpResponseData)await sut.OpenApiAsync(request, CancellationToken.None);
@@ -67,7 +68,7 @@ public sealed class SwaggerControllerTests
         if (File.Exists(target)) File.Move(target, backup);
         try
         {
-            var sut = new SwaggerController();
+            var sut = CreateController();
             var request = new TestHttpRequestData("https://localhost/api/openapi.yaml");
 
             var response = (TestHttpResponseData)await sut.OpenApiAsync(request, CancellationToken.None);
@@ -79,5 +80,18 @@ public sealed class SwaggerControllerTests
         {
             if (File.Exists(backup)) File.Move(backup, target);
         }
+    }
+    private static SwaggerController CreateController()
+    {
+        var settings = new Dictionary<string, string?>
+        {
+            ["SwaggerUi:StylesheetUrl"] = "/swagger-ui.css",
+            ["SwaggerUi:BundleUrl"] = "/swagger-ui-bundle.js",
+            ["SwaggerUi:ContentSecurityPolicy"] = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src data:; connect-src 'self'; font-src 'self' data:"
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(settings)
+            .Build();
+        return new SwaggerController(configuration);
     }
 }

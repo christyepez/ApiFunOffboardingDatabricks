@@ -1,51 +1,27 @@
 using System.Net;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Extensions.Configuration;
 
 namespace IdbInvest.Offboarding.Databricks.Facade.Functions.Controllers;
 
-public sealed class SwaggerController
+public sealed class SwaggerController(IConfiguration configuration)
 {
-    private const string SwaggerHtml = """
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>IDB Invest Offboarding API - Swagger</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css" />
-  <style>body{margin:0;background:#fafafa}.topbar{display:none}</style>
-</head>
-<body>
-  <div id="swagger-ui"></div>
-  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
-  <script>
-    window.onload = () => {
-      SwaggerUIBundle({
-        url: window.location.pathname.replace(/\/swagger(?:\/index\.html)?$/, '/openapi.yaml'),
-        dom_id: '#swagger-ui',
-        deepLinking: true,
-        displayRequestDuration: true,
-        persistAuthorization: false,
-        tryItOutEnabled: true
-      });
-    };
-  </script>
-</body>
-</html>
-""";
+    private readonly string _stylesheetUrl = configuration.GetRequiredSection("SwaggerUi:StylesheetUrl").Value!;
+    private readonly string _bundleUrl = configuration.GetRequiredSection("SwaggerUi:BundleUrl").Value!;
+    private readonly string _contentSecurityPolicy = configuration.GetRequiredSection("SwaggerUi:ContentSecurityPolicy").Value!;
 
     [Function("SwaggerUi")]
-    public async Task<HttpResponseData> SwaggerAsync(
+    public Task<HttpResponseData> SwaggerAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "swagger")] HttpRequestData req,
         CancellationToken cancellationToken)
-        => await CreateSwaggerResponseAsync(req, cancellationToken);
+        => CreateSwaggerResponseAsync(req, cancellationToken);
 
     [Function("SwaggerUiIndex")]
-    public async Task<HttpResponseData> SwaggerIndexAsync(
+    public Task<HttpResponseData> SwaggerIndexAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "swagger/index.html")] HttpRequestData req,
         CancellationToken cancellationToken)
-        => await CreateSwaggerResponseAsync(req, cancellationToken);
+        => CreateSwaggerResponseAsync(req, cancellationToken);
 
     [Function("OpenApiDocument")]
     public async Task<HttpResponseData> OpenApiAsync(
@@ -69,15 +45,43 @@ public sealed class SwaggerController
         return response;
     }
 
-    private static async Task<HttpResponseData> CreateSwaggerResponseAsync(HttpRequestData req, CancellationToken cancellationToken)
+    private async Task<HttpResponseData> CreateSwaggerResponseAsync(HttpRequestData req, CancellationToken cancellationToken)
     {
         var response = req.CreateResponse(HttpStatusCode.OK);
         response.Headers.Add("Content-Type", "text/html; charset=utf-8");
         response.Headers.Add("Cache-Control", "no-store");
         response.Headers.Add("X-Content-Type-Options", "nosniff");
-        response.Headers.Add("Content-Security-Policy", "default-src 'none'; script-src https://cdn.jsdelivr.net; style-src 'unsafe-inline' https://cdn.jsdelivr.net; img-src data:; connect-src 'self' https:; font-src https://cdn.jsdelivr.net data:");
-        await response.WriteStringAsync(SwaggerHtml, cancellationToken);
+        response.Headers.Add("Content-Security-Policy", _contentSecurityPolicy);
+        await response.WriteStringAsync(CreateSwaggerHtml(), cancellationToken);
         return response;
     }
-}
 
+    private string CreateSwaggerHtml() => $$"""
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IDB Invest Offboarding API - Swagger</title>
+  <link rel="stylesheet" href="{{_stylesheetUrl}}" />
+  <style>body{margin:0;background:#fafafa}.topbar{display:none}</style>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="{{_bundleUrl}}"></script>
+  <script>
+    window.onload = () => {
+      SwaggerUIBundle({
+        url: window.location.pathname.replace(/\/swagger(?:\/index\.html)?$/, '/openapi.yaml'),
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        displayRequestDuration: true,
+        persistAuthorization: false,
+        tryItOutEnabled: true
+      });
+    };
+  </script>
+</body>
+</html>
+""";
+}
