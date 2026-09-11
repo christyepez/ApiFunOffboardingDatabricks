@@ -340,8 +340,8 @@ public sealed class DatabricksStatementRepositoryTests
         Assert.Equal("text", row["s"]);
         Assert.Equal(42L, row["i"]);
         Assert.Equal(12.5m, row["d"]);
-        Assert.Equal(true, row["t"]);
-        Assert.Equal(false, row["f"]);
+        Assert.True(Assert.IsType<bool>(row["t"]));
+        Assert.False(Assert.IsType<bool>(row["f"]));
         Assert.Null(row["n"]);
         Assert.Null(row["missing"]);
     }
