@@ -85,3 +85,14 @@ https://fn-np-d-idbinvest-offboarding.azurewebsites.net/api/swagger
 ```
 
 The Swagger UI can use **Authorize** with the bearer token and **Try it out** for interactive calls. When testing through APIM, configure the OpenAPI server variable with the DEV APIM hostname.
+## Maintenance rule
+
+The Postman artifacts are part of the API contract and must evolve with the implementation.
+
+Whenever an API route, query parameter, response contract, authentication behavior, health endpoint, Swagger/OpenAPI endpoint, or environment variable changes, the same change must be reflected in:
+
+- `IDBInvest_Offboarding_Postman_Collection.json`
+- `local.postman_environment.json` when local variables change
+- `dev-apim.postman_environment.json` when DEV/APIM variables change
+
+A code change that modifies the public API is not considered complete until the Postman JSON remains valid and the affected request/tests are updated.
