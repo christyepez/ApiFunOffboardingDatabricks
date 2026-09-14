@@ -8,6 +8,8 @@ namespace IdbInvest.Offboarding.Databricks.Facade.Functions.Controllers;
 public sealed class SwaggerController(IConfiguration configuration)
 {
     private const string CacheControlHeader = "Cache-Control";
+    private const string ContentTypeHeader = "Content-Type";
+    private const string HttpGetMethod = "get";
     private const string NoStoreDirective = "no-store";
     private readonly string _stylesheetUrl = configuration.GetRequiredSection("SwaggerUi:StylesheetUrl").Value!;
     private readonly string _bundleUrl = configuration.GetRequiredSection("SwaggerUi:BundleUrl").Value!;
@@ -28,23 +30,23 @@ window.onload = () => {
 
     [Function("SwaggerUi")]
     public Task<HttpResponseData> SwaggerAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "swagger")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, HttpGetMethod, Route = "swagger")] HttpRequestData req,
         CancellationToken cancellationToken)
         => CreateSwaggerResponseAsync(req, cancellationToken);
 
     [Function("SwaggerUiIndex")]
     public Task<HttpResponseData> SwaggerIndexAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "swagger/index.html")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, HttpGetMethod, Route = "swagger/index.html")] HttpRequestData req,
         CancellationToken cancellationToken)
         => CreateSwaggerResponseAsync(req, cancellationToken);
 
     [Function("SwaggerInitializer")]
     public async Task<HttpResponseData> SwaggerInitializerAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "swagger/init.js")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, HttpGetMethod, Route = "swagger/init.js")] HttpRequestData req,
         CancellationToken cancellationToken)
     {
         var response = req.CreateResponse(HttpStatusCode.OK);
-        response.Headers.Add("Content-Type", "application/javascript; charset=utf-8");
+        response.Headers.Add(ContentTypeHeader, "application/javascript; charset=utf-8");
         response.Headers.Add(CacheControlHeader, NoStoreDirective);
         response.Headers.Add("X-Content-Type-Options", "nosniff");
         await response.WriteStringAsync(SwaggerInitializer, cancellationToken);
@@ -53,7 +55,7 @@ window.onload = () => {
 
     [Function("OpenApiDocument")]
     public async Task<HttpResponseData> OpenApiAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "openapi.yaml")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, HttpGetMethod, Route = "openapi.yaml")] HttpRequestData req,
         CancellationToken cancellationToken)
     {
         var path = Path.Combine(AppContext.BaseDirectory, "openapi.yaml");
@@ -67,7 +69,7 @@ window.onload = () => {
 
         var yaml = await File.ReadAllTextAsync(path, cancellationToken);
         var response = req.CreateResponse(HttpStatusCode.OK);
-        response.Headers.Add("Content-Type", "application/yaml; charset=utf-8");
+        response.Headers.Add(ContentTypeHeader, "application/yaml; charset=utf-8");
         response.Headers.Add(CacheControlHeader, NoStoreDirective);
         await response.WriteStringAsync(yaml, cancellationToken);
         return response;
@@ -76,7 +78,7 @@ window.onload = () => {
     private async Task<HttpResponseData> CreateSwaggerResponseAsync(HttpRequestData req, CancellationToken cancellationToken)
     {
         var response = req.CreateResponse(HttpStatusCode.OK);
-        response.Headers.Add("Content-Type", "text/html; charset=utf-8");
+        response.Headers.Add(ContentTypeHeader, "text/html; charset=utf-8");
         response.Headers.Add(CacheControlHeader, NoStoreDirective);
         response.Headers.Add("X-Content-Type-Options", "nosniff");
         response.Headers.Add("Content-Security-Policy", _contentSecurityPolicy);
