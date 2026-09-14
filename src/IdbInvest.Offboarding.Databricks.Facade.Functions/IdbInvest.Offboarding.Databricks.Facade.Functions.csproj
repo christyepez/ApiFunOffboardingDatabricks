@@ -25,4 +25,9 @@
     <None Update="local.settings.sample.json"><CopyToOutputDirectory>Never</CopyToOutputDirectory></None>
     <None Include="..\..\api\openapi.yaml" Link="openapi.yaml"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory><CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory></None>
   </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Controllers\SwaggerController.cs">
+      <SonarQubeExclude>true</SonarQubeExclude>
+    </Compile>
+  </ItemGroup>
 </Project>
