@@ -7,6 +7,8 @@ namespace IdbInvest.Offboarding.Databricks.Facade.Functions.Controllers;
 
 public sealed class SwaggerController(IConfiguration configuration)
 {
+    private const string CacheControlHeader = "Cache-Control";
+    private const string NoStoreDirective = "no-store";
     private readonly string _stylesheetUrl = configuration.GetRequiredSection("SwaggerUi:StylesheetUrl").Value!;
     private readonly string _bundleUrl = configuration.GetRequiredSection("SwaggerUi:BundleUrl").Value!;
     private readonly string _contentSecurityPolicy = configuration.GetRequiredSection("SwaggerUi:ContentSecurityPolicy").Value!;
@@ -43,7 +45,7 @@ window.onload = () => {
     {
         var response = req.CreateResponse(HttpStatusCode.OK);
         response.Headers.Add("Content-Type", "application/javascript; charset=utf-8");
-        response.Headers.Add("Cache-Control", "no-store");
+        response.Headers.Add(CacheControlHeader, NoStoreDirective);
         response.Headers.Add("X-Content-Type-Options", "nosniff");
         await response.WriteStringAsync(SwaggerInitializer, cancellationToken);
         return response;
@@ -58,7 +60,7 @@ window.onload = () => {
         if (!File.Exists(path))
         {
             var missing = req.CreateResponse(HttpStatusCode.NotFound);
-            missing.Headers.Add("Cache-Control", "no-store");
+            missing.Headers.Add(CacheControlHeader, NoStoreDirective);
             await missing.WriteStringAsync("OpenAPI document was not found.", cancellationToken);
             return missing;
         }
@@ -66,7 +68,7 @@ window.onload = () => {
         var yaml = await File.ReadAllTextAsync(path, cancellationToken);
         var response = req.CreateResponse(HttpStatusCode.OK);
         response.Headers.Add("Content-Type", "application/yaml; charset=utf-8");
-        response.Headers.Add("Cache-Control", "no-store");
+        response.Headers.Add(CacheControlHeader, NoStoreDirective);
         await response.WriteStringAsync(yaml, cancellationToken);
         return response;
     }
@@ -75,7 +77,7 @@ window.onload = () => {
     {
         var response = req.CreateResponse(HttpStatusCode.OK);
         response.Headers.Add("Content-Type", "text/html; charset=utf-8");
-        response.Headers.Add("Cache-Control", "no-store");
+        response.Headers.Add(CacheControlHeader, NoStoreDirective);
         response.Headers.Add("X-Content-Type-Options", "nosniff");
         response.Headers.Add("Content-Security-Policy", _contentSecurityPolicy);
         await response.WriteStringAsync(CreateSwaggerHtml(req), cancellationToken);
