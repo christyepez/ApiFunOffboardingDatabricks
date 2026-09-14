@@ -1,0 +1,808 @@
+{
+    "info":  {
+                 "_postman_id":  "e366233e-df46-4ad8-8e88-e9cbdebe2181",
+                 "name":  "IDB Invest - Offboarding Data Exposure API",
+                 "description":  "Postman collection for functional, contract, health, pagination, filtering and security validation of the governed read-only IDB Invest Offboarding Data Exposure API. Import together with postman/local.postman_environment.json. Local Function base URL defaults to http://localhost:7071/api. In hosted environments set baseUrl to the APIM/API URL and provide accessToken when authentication is enforced.",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "variable":  [
+                     {
+                         "key":  "baseUrl",
+                         "value":  "http://localhost:7071/api"
+                     },
+                     {
+                         "key":  "functionKey",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "accessToken",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "resource",
+                         "value":  "employees"
+                     },
+                     {
+                         "key":  "fields",
+                         "value":  "employeeId,fullName,email,status,department,country,terminationDate,updatedAt"
+                     },
+                     {
+                         "key":  "filter",
+                         "value":  "status:eq:OFFBOARDED"
+                     },
+                     {
+                         "key":  "sort",
+                         "value":  "-terminationDate,employeeId"
+                     },
+                     {
+                         "key":  "page",
+                         "value":  "1"
+                     },
+                     {
+                         "key":  "pageSize",
+                         "value":  "100"
+                     },
+                     {
+                         "key":  "includeTotal",
+                         "value":  "false"
+                     }
+                 ],
+    "event":  [
+                  {
+                      "listen":  "prerequest",
+                      "script":  {
+                                     "type":  "text/javascript",
+                                     "exec":  [
+                                                  "pm.variables.set(\u0027correlationId\u0027, \u0027postman-\u0027 + pm.variables.replaceIn(\u0027{{$guid}}\u0027));"
+                                              ]
+                                 }
+                  }
+              ],
+    "item":  [
+                 {
+                     "name":  "Health",
+                     "item":  [
+                                  {
+                                      "name":  "Corporate Health Standard",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "x-correlation-id",
+                                                                         "value":  "{{correlationId}}",
+                                                                         "type":  "text"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text",
+                                                                         "disabled":  true
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/health",
+                                                      "description":  "IDB standard deployable-app health endpoint. With baseUrl ending in /api, this calls GET /api/health. No bearer token is required."
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027HTTP status is 200 or 503\u0027, function () { pm.expect([200,503]).to.include(pm.response.code); });",
+                                                                                    "pm.test(\u0027Corporate health payload is coherent\u0027, function () { const b=pm.response.json(); pm.expect([\u0027Healthy\u0027,\u0027Unhealthy\u0027]).to.include(b.status); pm.expect(b.service).to.eql(\u0027Offboarding.Databricks.Facade\u0027); pm.expect([\u0027Healthy\u0027,\u0027Unhealthy\u0027]).to.include(b.databricks); if (b.status === \u0027Healthy\u0027) pm.response.to.have.status(200); else pm.response.to.have.status(503); });",
+                                                                                    "pm.test(\u0027Correlation header is returned\u0027, function () { pm.expect(pm.response.headers.get(\u0027x-correlation-id\u0027)).to.be.a(\u0027string\u0027).and.not.empty; });",
+                                                                                    "pm.test(\u0027Response disables caching\u0027, function () { pm.expect(pm.response.headers.get(\u0027Cache-Control\u0027)).to.include(\u0027no-store\u0027); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Healthcheck",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "x-correlation-id",
+                                                                         "value":  "{{correlationId}}",
+                                                                         "type":  "text"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text",
+                                                                         "disabled":  true
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/offboarding/v1/healthcheck"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027HTTP status is 200 or 503\u0027, function () { pm.expect([200,503]).to.include(pm.response.code); });",
+                                                                                    "pm.test(\u0027Dependency health payload is coherent\u0027, function () { const b=pm.response.json(); pm.expect([\u0027ok\u0027,\u0027degraded\u0027]).to.include(b.status); pm.expect(b.service).to.eql(\u0027Offboarding.Databricks.Facade\u0027); pm.expect([\u0027ok\u0027,\u0027unavailable\u0027]).to.include(b.databricks); if (b.databricks === \u0027ok\u0027) pm.response.to.have.status(200); else pm.response.to.have.status(503); });",
+                                                                                    "pm.test(\u0027Correlation header is returned\u0027, function () { pm.expect(pm.response.headers.get(\u0027x-correlation-id\u0027)).to.be.a(\u0027string\u0027).and.not.empty; });",
+                                                                                    "pm.test(\u0027Response disables caching\u0027, function () { pm.expect(pm.response.headers.get(\u0027Cache-Control\u0027)).to.include(\u0027no-store\u0027); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Dependency Health",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "x-correlation-id",
+                                                                         "value":  "{{correlationId}}",
+                                                                         "type":  "text"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text",
+                                                                         "disabled":  true
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/offboarding/v1/health"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027HTTP status is 200 or 503\u0027, function () { pm.expect([200,503]).to.include(pm.response.code); });",
+                                                                                    "pm.test(\u0027Dependency health payload is coherent\u0027, function () { const b=pm.response.json(); pm.expect([\u0027ok\u0027,\u0027degraded\u0027]).to.include(b.status); pm.expect(b.service).to.eql(\u0027Offboarding.Databricks.Facade\u0027); pm.expect([\u0027ok\u0027,\u0027unavailable\u0027]).to.include(b.databricks); if (b.databricks === \u0027ok\u0027) pm.response.to.have.status(200); else pm.response.to.have.status(503); });",
+                                                                                    "pm.test(\u0027Correlation header is returned\u0027, function () { pm.expect(pm.response.headers.get(\u0027x-correlation-id\u0027)).to.be.a(\u0027string\u0027).and.not.empty; });",
+                                                                                    "pm.test(\u0027Response disables caching\u0027, function () { pm.expect(pm.response.headers.get(\u0027Cache-Control\u0027)).to.include(\u0027no-store\u0027); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Liveness",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "x-correlation-id",
+                                                                         "value":  "{{correlationId}}",
+                                                                         "type":  "text"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text",
+                                                                         "disabled":  true
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/offboarding/v1/health/live",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "offboarding",
+                                                                               "v1",
+                                                                               "health",
+                                                                               "live"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027HTTP status is 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                                    "pm.test(\u0027Liveness does not depend on Databricks\u0027, function () { const b=pm.response.json(); pm.expect(b.status).to.eql(\u0027ok\u0027); pm.expect(b.service).to.eql(\u0027Offboarding.Databricks.Facade\u0027); pm.expect(b).not.to.have.property(\u0027databricks\u0027); });",
+                                                                                    "pm.test(\u0027Correlation header is returned\u0027, function () { pm.expect(pm.response.headers.get(\u0027x-correlation-id\u0027)).to.be.a(\u0027string\u0027).and.not.empty; });",
+                                                                                    "pm.test(\u0027Response disables caching\u0027, function () { pm.expect(pm.response.headers.get(\u0027Cache-Control\u0027)).to.include(\u0027no-store\u0027); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Readiness",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "x-correlation-id",
+                                                                         "value":  "{{correlationId}}",
+                                                                         "type":  "text"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text",
+                                                                         "disabled":  true
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/offboarding/v1/health/ready",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "offboarding",
+                                                                               "v1",
+                                                                               "health",
+                                                                               "ready"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027HTTP status is 200 or 503\u0027, function () { pm.expect([200,503]).to.include(pm.response.code); });",
+                                                                                    "pm.test(\u0027Dependency health payload is coherent\u0027, function () { const b=pm.response.json(); pm.expect([\u0027ok\u0027,\u0027degraded\u0027]).to.include(b.status); pm.expect(b.service).to.eql(\u0027Offboarding.Databricks.Facade\u0027); pm.expect([\u0027ok\u0027,\u0027unavailable\u0027]).to.include(b.databricks); if (b.databricks === \u0027ok\u0027) pm.response.to.have.status(200); else pm.response.to.have.status(503); });",
+                                                                                    "pm.test(\u0027Correlation header is returned\u0027, function () { pm.expect(pm.response.headers.get(\u0027x-correlation-id\u0027)).to.be.a(\u0027string\u0027).and.not.empty; });",
+                                                                                    "pm.test(\u0027Response disables caching\u0027, function () { pm.expect(pm.response.headers.get(\u0027Cache-Control\u0027)).to.include(\u0027no-store\u0027); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Metadata",
+                     "item":  [
+                                  {
+                                      "name":  "Employee metadata contract",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "x-correlation-id",
+                                                                         "value":  "{{correlationId}}",
+                                                                         "type":  "text"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text",
+                                                                         "disabled":  true
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/offboarding/v1/resources/{{resource}}/metadata"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027HTTP status is 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                                    "pm.test(\u0027Metadata identifies the employees resource\u0027, function () { const body = pm.response.json(); pm.expect(body.resource).to.eql(\u0027employees\u0027); });",
+                                                                                    "pm.test(\u0027Metadata exposes fields and maximum page size\u0027, function () { const body = pm.response.json(); pm.expect(body.fields).to.be.an(\u0027array\u0027).that.is.not.empty; pm.expect(body.maxPageSize).to.be.a(\u0027number\u0027); });",
+                                                                                    "pm.test(\u0027Metadata does not expose physical Databricks source\u0027, function () { const raw = pm.response.text(); pm.expect(raw).not.to.include(\u0027gold.offboarding.vw_employees\u0027); });",
+                                                                                    "pm.test(\u0027Metadata exposes logical model and contract version\u0027, function () { const body = pm.response.json(); pm.expect(body.model).to.eql(\u0027employee-offboarding-candidate\u0027); pm.expect(body.contractVersion).to.eql(\u00271.0\u0027); });",
+                                                                                    "pm.test(\u0027Correlation header is returned\u0027, function () { pm.expect(pm.response.headers.get(\u0027x-correlation-id\u0027)).to.be.a(\u0027string\u0027).and.not.empty; });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Unknown resource returns 404",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "x-correlation-id",
+                                                                         "value":  "{{correlationId}}",
+                                                                         "type":  "text"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text",
+                                                                         "disabled":  true
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/offboarding/v1/resources/not-a-resource/metadata"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027HTTP status is 404\u0027, function () { pm.response.to.have.status(404); });",
+                                                                                    "pm.test(\u0027Error contract contains code and correlationId\u0027, function () { const body = pm.response.json(); pm.expect(body).to.have.property(\u0027code\u0027); pm.expect(body).to.have.property(\u0027correlationId\u0027); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Dynamic Query",
+                     "item":  [
+                                  {
+                                      "name":  "Query employees with filters and paging",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "x-correlation-id",
+                                                                         "value":  "{{correlationId}}",
+                                                                         "type":  "text"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text",
+                                                                         "disabled":  true
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/offboarding/v1/{{resource}}?fields={{fields}}\u0026filter={{filter}}\u0026sort={{sort}}\u0026page={{page}}\u0026pageSize={{pageSize}}\u0026includeTotal={{includeTotal}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "offboarding",
+                                                                               "v1",
+                                                                               "{{resource}}"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "fields",
+                                                                                    "value":  "{{fields}}"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "filter",
+                                                                                    "value":  "{{filter}}"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "sort",
+                                                                                    "value":  "{{sort}}"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "page",
+                                                                                    "value":  "{{page}}"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "pageSize",
+                                                                                    "value":  "{{pageSize}}"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "includeTotal",
+                                                                                    "value":  "{{includeTotal}}"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "code",
+                                                                                    "value":  "{{functionKey}}",
+                                                                                    "disabled":  true
+                                                                                }
+                                                                            ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027HTTP status is 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                                    "pm.test(\u0027Response follows query envelope contract\u0027, function () { const body=pm.response.json(); pm.expect(body.data).to.be.an(\u0027array\u0027); pm.expect(body.meta).to.be.an(\u0027object\u0027); });",
+                                                                                    "pm.test(\u0027Paging metadata matches request\u0027, function () { const m=pm.response.json().meta; pm.expect(m.page).to.eql(Number(pm.variables.get(\u0027page\u0027) || pm.environment.get(\u0027page\u0027) || 1)); pm.expect(m.pageSize).to.eql(Number(pm.variables.get(\u0027pageSize\u0027) || pm.environment.get(\u0027pageSize\u0027) || 100)); pm.expect(m).to.have.property(\u0027returned\u0027); pm.expect(m).to.have.property(\u0027hasMore\u0027); });",
+                                                                                    "pm.test(\u0027Logical model and contract version are exposed\u0027, function () { const m=pm.response.json().meta; pm.expect(m.model).to.eql(\u0027employee-offboarding-candidate\u0027); pm.expect(m.contractVersion).to.eql(\u00271.0\u0027); });",
+                                                                                    "pm.test(\u0027Physical Databricks identifiers are not exposed\u0027, function () { const raw=pm.response.text(); pm.expect(raw).not.to.include(\u0027vw_employees\u0027); pm.expect(raw).not.to.include(\u0027employee_id\u0027); });",
+                                                                                    "pm.test(\u0027Correlation header is returned\u0027, function () { pm.expect(pm.response.headers.get(\u0027x-correlation-id\u0027)).to.be.a(\u0027string\u0027).and.not.empty; });",
+                                                                                    "pm.test(\u0027Response disables caching\u0027, function () { pm.expect(pm.response.headers.get(\u0027Cache-Control\u0027)).to.include(\u0027no-store\u0027); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Unknown field is rejected",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "x-correlation-id",
+                                                                         "value":  "{{correlationId}}",
+                                                                         "type":  "text"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text",
+                                                                         "disabled":  true
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/offboarding/v1/{{resource}}?fields=employeeId,password\u0026page=1\u0026pageSize=100"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027HTTP status is 400\u0027, function () { pm.response.to.have.status(400); });",
+                                                                                    "pm.test(\u0027Invalid query uses normalized error contract\u0027, function () { const body = pm.response.json(); pm.expect(body.code).to.eql(\u0027INVALID_QUERY\u0027); pm.expect(body).to.have.property(\u0027message\u0027); pm.expect(body).to.have.property(\u0027correlationId\u0027); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Page size above resource limit is rejected",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "x-correlation-id",
+                                                                         "value":  "{{correlationId}}",
+                                                                         "type":  "text"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text",
+                                                                         "disabled":  true
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/offboarding/v1/{{resource}}?page=1\u0026pageSize=1001"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027HTTP status is 400\u0027, function () { pm.response.to.have.status(400); });",
+                                                                                    "pm.test(\u0027Error code is INVALID_QUERY\u0027, function () { pm.expect(pm.response.json().code).to.eql(\u0027INVALID_QUERY\u0027); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Malformed filter does not echo submitted value",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "x-correlation-id",
+                                                                         "value":  "{{correlationId}}",
+                                                                         "type":  "text"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text",
+                                                                         "disabled":  true
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/offboarding/v1/{{resource}}?filter=email:invalid:private.person@iadb.org:extra",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "offboarding",
+                                                                               "v1",
+                                                                               "employees"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "filter",
+                                                                                    "value":  "email:invalid:private.person@iadb.org:extra"
+                                                                                }
+                                                                            ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027HTTP status is 400\u0027, function () { pm.response.to.have.status(400); });",
+                                                                                    "pm.test(\u0027Error does not echo submitted PII\u0027, function () { pm.expect(pm.response.text()).not.to.include(\u0027private.person@iadb.org\u0027); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Query employees with defaults",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "x-correlation-id",
+                                                                         "value":  "{{correlationId}}",
+                                                                         "type":  "text"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text",
+                                                                         "disabled":  true
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/offboarding/v1/{{resource}}"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027HTTP status is 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                                    "pm.test(\u0027Default paging is page 1 / pageSize 100\u0027, function () { const m=pm.response.json().meta; pm.expect(m.page).to.eql(1); pm.expect(m.pageSize).to.eql(100); });",
+                                                                                    "pm.test(\u0027Correlation header is returned\u0027, function () { pm.expect(pm.response.headers.get(\u0027x-correlation-id\u0027)).to.be.a(\u0027string\u0027).and.not.empty; });",
+                                                                                    "pm.test(\u0027Response disables caching\u0027, function () { pm.expect(pm.response.headers.get(\u0027Cache-Control\u0027)).to.include(\u0027no-store\u0027); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Query employees with multiple filters",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "x-correlation-id",
+                                                                         "value":  "{{correlationId}}",
+                                                                         "type":  "text"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text",
+                                                                         "disabled":  true
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/offboarding/v1/{{resource}}?filter=status:eq:OFFBOARDED\u0026filter=country:eq:US\u0026page=1\u0026pageSize=100",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "offboarding",
+                                                                               "v1",
+                                                                               "{{resource}}"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "filter",
+                                                                                    "value":  "status:eq:OFFBOARDED"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "filter",
+                                                                                    "value":  "country:eq:US"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "page",
+                                                                                    "value":  "1"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "pageSize",
+                                                                                    "value":  "100"
+                                                                                }
+                                                                            ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027HTTP status is 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                                    "pm.test(\u0027Response is a query envelope\u0027, function () { const b=pm.response.json(); pm.expect(b.data).to.be.an(\u0027array\u0027); pm.expect(b.meta).to.be.an(\u0027object\u0027); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Invalid page is rejected",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "x-correlation-id",
+                                                                         "value":  "{{correlationId}}",
+                                                                         "type":  "text"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text",
+                                                                         "disabled":  true
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/offboarding/v1/{{resource}}?page=abc"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027HTTP status is 400\u0027, function () { pm.response.to.have.status(400); });",
+                                                                                    "pm.test(\u0027Error code is INVALID_QUERY\u0027, function () { pm.expect(pm.response.json().code).to.eql(\u0027INVALID_QUERY\u0027); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Invalid includeTotal is rejected",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "x-correlation-id",
+                                                                         "value":  "{{correlationId}}",
+                                                                         "type":  "text"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text",
+                                                                         "disabled":  true
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/offboarding/v1/{{resource}}?includeTotal=maybe"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027HTTP status is 400\u0027, function () { pm.response.to.have.status(400); });",
+                                                                                    "pm.test(\u0027Error code is INVALID_QUERY\u0027, function () { pm.expect(pm.response.json().code).to.eql(\u0027INVALID_QUERY\u0027); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Swagger / OpenAPI",
+                     "description":  "Runtime Swagger UI and OpenAPI contract endpoints. These requests are updated whenever API documentation routes change.",
+                     "item":  [
+                                  {
+                                      "name":  "Swagger UI",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text",
+                                                                         "disabled":  true
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/swagger",
+                                                      "description":  "Interactive Swagger UI entry point."
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Swagger UI returns 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                                    "pm.test(\u0027Swagger UI returns HTML\u0027, function () { pm.expect(pm.response.headers.get(\u0027Content-Type\u0027)).to.include(\u0027text/html\u0027); });",
+                                                                                    "pm.test(\u0027Swagger UI disables caching\u0027, function () { pm.expect(pm.response.headers.get(\u0027Cache-Control\u0027)).to.include(\u0027no-store\u0027); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Swagger UI index",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text",
+                                                                         "disabled":  true
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/swagger/index.html",
+                                                      "description":  "Explicit Swagger UI index route."
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Swagger index returns 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                                    "pm.test(\u0027Swagger index returns HTML\u0027, function () { pm.expect(pm.response.headers.get(\u0027Content-Type\u0027)).to.include(\u0027text/html\u0027); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Swagger initializer JavaScript",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text",
+                                                                         "disabled":  true
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/swagger/init.js",
+                                                      "description":  "Same-origin JavaScript initializer used by Swagger UI."
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Initializer returns 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                                    "pm.test(\u0027Initializer returns JavaScript\u0027, function () { pm.expect(pm.response.headers.get(\u0027Content-Type\u0027)).to.include(\u0027application/javascript\u0027); });",
+                                                                                    "pm.test(\u0027Initializer configures SwaggerUIBundle\u0027, function () { pm.expect(pm.response.text()).to.include(\u0027SwaggerUIBundle\u0027); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "OpenAPI YAML document",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text",
+                                                                         "disabled":  true
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/openapi.yaml",
+                                                      "description":  "Canonical OpenAPI 3.0 contract served by the Function App."
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027OpenAPI document returns 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                                    "pm.test(\u0027OpenAPI document returns YAML\u0027, function () { pm.expect(pm.response.headers.get(\u0027Content-Type\u0027)).to.include(\u0027application/yaml\u0027); });",
+                                                                                    "pm.test(\u0027OpenAPI document has contract marker\u0027, function () { pm.expect(pm.response.text()).to.include(\u0027openapi: 3.0.3\u0027); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  }
+                              ]
+                 }
+             ]
+}

@@ -18,13 +18,13 @@ public sealed class QueryService(
         long? total = null;
         if (request.IncludeTotal)
             total = await repository.CountAsync(queryBuilder.BuildCount(definition, request), cancellationToken);
-        return new QueryResponseDto(rows, new QueryMetadataDto(resource, request.Page, request.PageSize, rows.Count, total, hasMore, correlationId));
+        return new QueryResponseDto(rows, new QueryMetadataDto(resource, definition.Model, definition.ContractVersion, request.Page, request.PageSize, rows.Count, total, hasMore, correlationId));
     }
 
     public ResourceMetadataDto GetMetadata(string resource)
     {
         var definition = registry.GetRequired(resource);
         var fields = definition.Fields.Select(x => new ResourceFieldDto(x.Key, x.Value.Type, x.Value.Filterable, x.Value.Sortable, x.Value.Selectable)).ToArray();
-        return new ResourceMetadataDto(definition.Name, fields, definition.MaxPageSize);
+        return new ResourceMetadataDto(definition.Name, definition.Model, definition.ContractVersion, fields, definition.MaxPageSize);
     }
 }

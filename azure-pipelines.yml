@@ -1,0 +1,87 @@
+# =============================================================================
+# IDB Invest Offboarding - Databricks Facade Function App pipeline
+# =============================================================================
+# ContractValidation protects API/configuration assets that are specific to
+# Offboarding. The centralized template owns .NET/Sonar/tests/publish/deploy.
+#
+# Flow: ContractValidation -> CodeValidation -> central deployment pipeline 422.
+# =============================================================================
+
+trigger:
+  branches:
+    include:
+      - main
+      - feature*
+  paths:
+    include:
+      - src/**
+      - tests/**
+      - api/**
+      - deploy/**
+      - postman/**
+      - "*.sln"
+      - global.json
+      - Directory.Build.props
+      - azure-pipelines.yml
+
+pr: none
+resources:
+  repositories:
+    - repository: net-validation
+      type: bitbucket
+      endpoint: "Bitbucket - oscarlo"
+      name: idbinvest/idbisupportnetcodevalidation
+      ref: refs/heads/main
+
+stages:
+  - stage: ContractValidation
+    displayName: Validate API and deployment contracts
+    pool:
+      vmImage: ubuntu-latest
+    jobs:
+      - job: ValidateContracts
+        displayName: Validate OpenAPI, JSON, APIM and Bicep
+        steps:
+          - checkout: self
+          - script: |
+              node -e "['src/IdbInvest.Offboarding.Databricks.Facade.Functions/resource-definitions.json','postman/IDBInvest_Offboarding_Postman_Collection.json','postman/local.postman_environment.json'].forEach(p=>JSON.parse(require('fs').readFileSync(p,'utf8'))); console.log('JSON assets: OK')"
+              npx --yes @redocly/cli lint api/openapi.yaml
+              python - <<'PY'
+              import xml.etree.ElementTree as ET
+              ET.parse('deploy/apim/inbound-policy.xml')
+              print('APIM policy XML: OK')
+              PY
+            displayName: Validate API contracts
+          - script: |
+              az bicep install
+              az bicep build --file deploy/infra/main.bicep
+              for f in deploy/infra/parameters/*.bicepparam; do
+                az bicep build-params --file "$f" --stdout >/dev/null
+                echo "$f: OK"
+              done
+            displayName: Validate Bicep contracts
+
+  - template: pipelines/net-validate.yml@net-validation
+    parameters:
+      solutionOrProject: "IdbInvest.Offboarding.Databricks.Facade.sln"
+      dotnetVersion: "10.x"
+      coverageThreshold: 50
+      # SonarQube project key for the Offboarding solution.
+      # SONAR_TOKEN remains a mandatory secret pipeline variable.
+      sonarProjectKey: "Offboarding-Integration"
+      projectToPublish: "src/IdbInvest.Offboarding.Databricks.Facade.Functions/IdbInvest.Offboarding.Databricks.Facade.Functions.csproj"
+      deployPipelineId: "422"
+      appType: "functionapp"
+      # Actual resources created by the Terraform pipeline (run 12859): the
+      # Function Apps live in the shared rg-np-idbinvest-visuallease RG.
+      appNameDev: "fn-np-d-idbinvest-offboarding"
+      resourceGroupDev: "rg-np-idbinvest-visuallease"
+      deployDev: true
+      appNameTest: "fn-np-t-idbinvest-offboarding"
+      resourceGroupTest: "rg-np-idbinvest-visuallease"
+      deployTest: true
+      # Production is prepared but intentionally disabled until the PROD
+      # Function App and deployment approval path are confirmed.
+      appNameProd: "fn-p-idbinvest-offboarding-facade"
+      resourceGroupProd: "rg-p-idbinvest-offboarding"
+      deployProd: false

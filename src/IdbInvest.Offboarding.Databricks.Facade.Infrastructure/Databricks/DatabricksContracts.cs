@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace IdbInvest.Offboarding.Databricks.Facade.Infrastructure.Databricks;
 
@@ -22,30 +22,44 @@ internal sealed class StatementResponse
     [JsonPropertyName("manifest")] public StatementManifest? Manifest { get; init; }
     [JsonPropertyName("result")] public StatementResult? Result { get; init; }
 }
+
 internal sealed class StatementStatus
 {
     [JsonPropertyName("state")] public string? State { get; init; }
     [JsonPropertyName("error")] public StatementError? Error { get; init; }
 }
+
 internal sealed class StatementError
 {
     [JsonPropertyName("error_code")] public string? ErrorCode { get; init; }
     [JsonPropertyName("message")] public string? Message { get; init; }
 }
+
 internal sealed class StatementManifest
 {
     [JsonPropertyName("schema")] public StatementSchema? Schema { get; init; }
+    [JsonPropertyName("total_chunk_count")] public int? TotalChunkCount { get; init; }
+    [JsonPropertyName("total_row_count")] public long? TotalRowCount { get; init; }
+    [JsonPropertyName("truncated")] public bool Truncated { get; init; }
 }
+
 internal sealed class StatementSchema
 {
     [JsonPropertyName("columns")] public List<StatementColumn> Columns { get; init; } = [];
 }
+
 internal sealed class StatementColumn
 {
     [JsonPropertyName("name")] public string Name { get; init; } = string.Empty;
     [JsonPropertyName("type_name")] public string? TypeName { get; init; }
 }
+
 internal sealed class StatementResult
 {
+    [JsonPropertyName("chunk_index")] public int? ChunkIndex { get; init; }
+    [JsonPropertyName("row_offset")] public long? RowOffset { get; init; }
+    [JsonPropertyName("row_count")] public long? RowCount { get; init; }
     [JsonPropertyName("data_array")] public List<List<object?>> DataArray { get; init; } = [];
+    [JsonPropertyName("next_chunk_index")] public int? NextChunkIndex { get; init; }
+    [JsonPropertyName("next_chunk_internal_link")] public string? NextChunkInternalLink { get; init; }
 }

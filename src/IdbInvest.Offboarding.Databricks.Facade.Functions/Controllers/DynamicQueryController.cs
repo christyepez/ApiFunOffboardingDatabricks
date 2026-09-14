@@ -12,7 +12,7 @@ public sealed class DynamicQueryController(IQueryService service, ILogger<Dynami
 {
     [Function("OffboardingDynamicQuery")]
     public async Task<HttpResponseData> GetAsync(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "offboarding/v1/{resource}")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "offboarding/v1/{resource}")] HttpRequestData req,
         string resource,
         CancellationToken cancellationToken)
     {
