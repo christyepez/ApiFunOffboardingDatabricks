@@ -183,6 +183,78 @@ paths:
           description: Forbidden
         '404':
           $ref: '#/components/responses/NotFound'
+  /orchestrations:
+    post:
+      summary: Start an offboarding orchestration
+      operationId: startOffboardingOrchestration
+      description: |
+        Starts a coordinated offboarding flow for an eligible employee.
+        Current DEV baseline uses mock target adapters; no downstream deprovisioning is executed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartOrchestrationRequest'
+      responses:
+        '202':
+          description: New orchestration accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '200':
+          description: Idempotent duplicate; existing orchestration returned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Offboarding candidate not found
+  /orchestrations/{orchestrationId}:
+    get:
+      summary: Get orchestration state
+      operationId: getOffboardingOrchestration
+      parameters:
+        - name: orchestrationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Orchestration state
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '404':
+          description: Orchestration not found
+  /orchestrator/health:
+    get:
+      summary: Check Offboarding Orchestrator liveness
+      operationId: orchestratorHealth
+      responses:
+        '200':
+          description: Orchestrator is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, service]
+                properties:
+                  status:
+                    type: string
+                    example: Healthy
+                  service:
+                    type: string
+                    example: Offboarding.Orchestrator
   /health:
     get:
       summary: Check API readiness including Databricks dependency health
@@ -214,7 +286,8 @@ paths:
                 service: Offboarding.Databricks.Facade
                 databricks: unavailable
                 correlationId: health-002
-components:  securitySchemes:
+components:
+  securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
@@ -259,6 +332,23 @@ components:  securitySchemes:
             message: Databricks dependency is unavailable.
             correlationId: postman-error-004
   schemas:
+    StartOrchestrationRequest:
+      type: object
+      required: [employeeId, targets]
+      properties:
+        employeeId:
+          type: string
+          example: E100
+        targets:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            enum: [PeopleSoft, Acbs, Workiva]
+        idempotencyKey:
+          type: string
+          nullable: true
+          example: offboarding-E100-20261021
     QueryResponse:
       type: object
       required: [data, meta]

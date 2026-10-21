@@ -1,0 +1,13 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "AZURE_FUNCTIONS_ENVIRONMENT": "Development",
+    "DataExposure__BaseUrl": "http://localhost:7071/api/",
+    "DataExposure__AuthenticationMode": "None",
+    "DataExposure__ResourceScope": "",
+    "DataExposure__SubscriptionKey": "",
+    "TargetAdapters__Mode": "Mock"
+  }
+}

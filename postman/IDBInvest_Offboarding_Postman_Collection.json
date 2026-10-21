@@ -45,6 +45,18 @@
     {
       "key": "includeTotal",
       "value": "false"
+    },
+    {
+      "key": "orchestratorBaseUrl",
+      "value": "http://localhost:7072/api"
+    },
+    {
+      "key": "employeeId",
+      "value": "E100"
+    },
+    {
+      "key": "orchestrationId",
+      "value": ""
     }
   ],
   "event": [
@@ -678,6 +690,63 @@
               }
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "Orchestrator",
+      "description": "Offboarding Orchestrator baseline. DEV target adapters are mocks and execute no downstream deprovisioning.",
+      "item": [
+        {
+          "name": "Orchestrator Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orchestratorBaseUrl}}/offboarding/v1/orchestrator/health"
+          }
+        },
+        {
+          "name": "Start Offboarding Orchestration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"targets\": [\n    \"PeopleSoft\",\n    \"Acbs\",\n    \"Workiva\"\n  ],\n  \"idempotencyKey\": \"postman-{{employeeId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{orchestratorBaseUrl}}/offboarding/v1/orchestrations"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status is 200 or 202', function () { pm.expect([200,202]).to.include(pm.response.code); });",
+                  "const b=pm.response.json(); if (b.orchestrationId) pm.collectionVariables.set('orchestrationId', b.orchestrationId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Offboarding Orchestration",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orchestratorBaseUrl}}/offboarding/v1/orchestrations/{{orchestrationId}}"
+          }
         }
       ]
     }
