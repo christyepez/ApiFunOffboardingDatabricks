@@ -8,6 +8,10 @@
     "DataExposure__AuthenticationMode": "None",
     "DataExposure__ResourceScope": "",
     "DataExposure__SubscriptionKey": "",
+    "OrchestrationState__Provider": "InMemory",
+    "OrchestrationState__TableName": "OffboardingOrchestrations",
+    "OrchestrationState__ConnectionString": "",
+    "OrchestrationState__ServiceUri": "",
     "TargetAdapters__Mode": "Mock"
   }
 }

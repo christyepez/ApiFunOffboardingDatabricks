@@ -1,3 +1,5 @@
+using Azure.Data.Tables;
+using Azure.Identity;
 using IdbInvest.Offboarding.Orchestrator.Core.Interfaces;
 using IdbInvest.Offboarding.Orchestrator.Core.Models;
 using IdbInvest.Offboarding.Orchestrator.Infrastructure.DataExposure;
@@ -14,6 +16,18 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddOrchestratorInfrastructure(
         this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment environment)
+    {
+        AddDataExposure(services, configuration, environment);
+        AddStateStore(services, configuration, environment);
+        AddTargetAdapters(services, configuration);
+
+        return services;
+    }
+
+    private static void AddDataExposure(
+        IServiceCollection services,
         IConfiguration configuration,
         IHostEnvironment environment)
     {
@@ -56,9 +70,58 @@ public static class DependencyInjection
             options.Retry.MaxRetryAttempts = 2;
             options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(30);
         });
+    }
 
-        services.AddSingleton<IOrchestrationStateStore, InMemoryOrchestrationStateStore>();
+    private static void AddStateStore(
+        IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment environment)
+    {
+        services.AddOptions<OrchestrationStateOptions>()
+            .Bind(configuration.GetSection(OrchestrationStateOptions.SectionName));
 
+        var provider = configuration[$"{OrchestrationStateOptions.SectionName}:Provider"]
+                       ?? (environment.IsDevelopment() ? "InMemory" : "AzureTable");
+
+        if (provider.Equals("InMemory", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!environment.IsDevelopment())
+                throw new InvalidOperationException(
+                    "OrchestrationState provider 'InMemory' is allowed only in Development.");
+
+            services.AddSingleton<IOrchestrationStateStore, InMemoryOrchestrationStateStore>();
+            return;
+        }
+
+        if (!provider.Equals("AzureTable", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(
+                $"Unsupported OrchestrationState provider '{provider}'. " +
+                "Supported values: InMemory (Development only), AzureTable.");
+
+        services.AddSingleton(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<OrchestrationStateOptions>>().Value;
+
+            if (!string.IsNullOrWhiteSpace(options.ConnectionString))
+                return new TableClient(options.ConnectionString, options.TableName);
+
+            if (!Uri.TryCreate(options.ServiceUri, UriKind.Absolute, out var serviceUri))
+                throw new InvalidOperationException(
+                    "OrchestrationState:ServiceUri must be configured when ConnectionString is not provided.");
+
+            return new TableClient(
+                serviceUri,
+                options.TableName,
+                new DefaultAzureCredential());
+        });
+
+        services.AddSingleton<IOrchestrationStateStore, AzureTableOrchestrationStateStore>();
+    }
+
+    private static void AddTargetAdapters(
+        IServiceCollection services,
+        IConfiguration configuration)
+    {
         var targetMode = configuration["TargetAdapters:Mode"] ?? "Mock";
         if (!targetMode.Equals("Mock", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException(
@@ -70,8 +133,6 @@ public static class DependencyInjection
             new MockTargetOffboardingAdapter(TargetSystem.Acbs));
         services.AddSingleton<ITargetOffboardingAdapter>(
             new MockTargetOffboardingAdapter(TargetSystem.Workiva));
-
-        return services;
     }
 
     private static string NormalizeBaseUrl(string? baseUrl)
