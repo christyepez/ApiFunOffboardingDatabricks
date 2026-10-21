@@ -235,7 +235,7 @@ resource orchestratorFunctionApp 'Microsoft.Web/sites@2022-09-01' = if (deployOr
         { name: 'DataExposure__ResourceScope', value: dataExposureResourceScope }
         { name: 'OrchestrationState__Provider', value: 'AzureTable' }
         { name: 'OrchestrationState__TableName', value: 'OffboardingOrchestrations' }
-        { name: 'OrchestrationState__ServiceUri', value: 'https://${storage.name}.table.${environment().suffixes.storage}' }
+        { name: 'OrchestrationState__ServiceUri', value: 'https://${storage.name}.table.${az.environment().suffixes.storage}' }
         { name: 'TargetAdapters__Mode', value: 'Mock' }
       ], empty(dataExposureSubscriptionKeySecretUri) ? [] : [
         { name: 'DataExposure__SubscriptionKey', value: '@Microsoft.KeyVault(SecretUri=${dataExposureSubscriptionKeySecretUri})' }
@@ -435,7 +435,7 @@ resource orchestratorPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-09
       {
         name: '${orchestratorFunctionAppName}-connection'
         properties: {
-          privateLinkServiceId: orchestratorFunctionApp.id
+          privateLinkServiceId: orchestratorFunctionApp!.id
           groupIds: ['sites']
         }
       }
@@ -589,41 +589,41 @@ resource keyVaultSecretsRole 'Microsoft.Authorization/roleAssignments@2022-04-01
 }
 
 resource orchestratorStorageBlobRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployOrchestrator) {
-  name: guid(storage.id, orchestratorFunctionApp.id, storageBlobDataOwnerRoleId)
+  name: guid(storage.id, orchestratorFunctionApp!.id, storageBlobDataOwnerRoleId)
   scope: storage
   properties: {
     roleDefinitionId: storageBlobDataOwnerRoleId
-    principalId: orchestratorFunctionApp.identity.principalId
+    principalId: orchestratorFunctionApp!.identity.principalId
     principalType: 'ServicePrincipal'
   }
 }
 
 resource orchestratorStorageQueueRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployOrchestrator) {
-  name: guid(storage.id, orchestratorFunctionApp.id, storageQueueDataContributorRoleId)
+  name: guid(storage.id, orchestratorFunctionApp!.id, storageQueueDataContributorRoleId)
   scope: storage
   properties: {
     roleDefinitionId: storageQueueDataContributorRoleId
-    principalId: orchestratorFunctionApp.identity.principalId
+    principalId: orchestratorFunctionApp!.identity.principalId
     principalType: 'ServicePrincipal'
   }
 }
 
 resource orchestratorStorageTableRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployOrchestrator) {
-  name: guid(storage.id, orchestratorFunctionApp.id, storageTableDataContributorRoleId)
+  name: guid(storage.id, orchestratorFunctionApp!.id, storageTableDataContributorRoleId)
   scope: storage
   properties: {
     roleDefinitionId: storageTableDataContributorRoleId
-    principalId: orchestratorFunctionApp.identity.principalId
+    principalId: orchestratorFunctionApp!.identity.principalId
     principalType: 'ServicePrincipal'
   }
 }
 
 resource orchestratorKeyVaultSecretsRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployOrchestrator) {
-  name: guid(keyVault.id, orchestratorFunctionApp.id, keyVaultSecretsUserRoleId)
+  name: guid(keyVault.id, orchestratorFunctionApp!.id, keyVaultSecretsUserRoleId)
   scope: keyVault
   properties: {
     roleDefinitionId: keyVaultSecretsUserRoleId
-    principalId: orchestratorFunctionApp.identity.principalId
+    principalId: orchestratorFunctionApp!.identity.principalId
     principalType: 'ServicePrincipal'
   }
 }
@@ -631,8 +631,8 @@ resource orchestratorKeyVaultSecretsRole 'Microsoft.Authorization/roleAssignment
 output functionAppId string = functionApp.id
 output functionAppPrincipalId string = functionApp.identity.principalId
 output functionAppDefaultHostName string = functionApp.properties.defaultHostName
-output orchestratorFunctionAppId string = deployOrchestrator ? orchestratorFunctionApp.id : ''
-output orchestratorFunctionAppPrincipalId string = deployOrchestrator ? orchestratorFunctionApp.identity.principalId : ''
-output orchestratorFunctionAppDefaultHostName string = deployOrchestrator ? orchestratorFunctionApp.properties.defaultHostName : ''
+output orchestratorFunctionAppId string = deployOrchestrator ? orchestratorFunctionApp!.id : ''
+output orchestratorFunctionAppPrincipalId string = deployOrchestrator ? orchestratorFunctionApp!.identity.principalId : ''
+output orchestratorFunctionAppDefaultHostName string = deployOrchestrator ? orchestratorFunctionApp!.properties.defaultHostName : ''
 output keyVaultUri string = keyVault.properties.vaultUri
 output appInsightsConnectionString string = appInsights.properties.ConnectionString
