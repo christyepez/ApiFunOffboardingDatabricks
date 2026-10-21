@@ -14,8 +14,20 @@ param functionAppAudience string
 param apimManagedIdentityClientId string
 param databricksHost string
 param databricksWarehouseId string
+param dataMotionBaseUrl string = ''
+param dataMotionWarehouse string = 'warehouse_idbi_offboarding'
+param dataMotionSubscriptionKeySecretUri string = ''
+param dataMotionAccessTokenScope string = '2ff814a6-3304-4ab8-85cb-cd0e6f879c1d/.default'
 param azureFilesConnectionSecretUri string
 param contentShareName string
+param deployOrchestrator bool = false
+param orchestratorFunctionAppName string = ''
+param orchestratorContentShareName string = 'offboardingorchestrator'
+param orchestratorFunctionAppClientId string = ''
+param orchestratorFunctionAppAudience string = ''
+param dataExposureBaseUrl string = ''
+param dataExposureResourceScope string = ''
+param dataExposureSubscriptionKeySecretUri string = ''
 param linuxFxVersion string = 'DOTNET-ISOLATED|10.0'
 param functionPublicNetworkAccess bool = true
 param storagePublicNetworkAccess bool = true
@@ -94,6 +106,14 @@ resource contentShare 'Microsoft.Storage/storageAccounts/fileServices/shares@202
   }
 }
 
+resource orchestratorContentShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2023-05-01' = if (deployOrchestrator) {
+  parent: fileService
+  name: orchestratorContentShareName
+  properties: {
+    accessTier: 'TransactionOptimized'
+  }
+}
+
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: keyVaultName
   location: location
@@ -146,7 +166,7 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
       http20Enabled: true
       alwaysOn: true
       vnetRouteAllEnabled: !empty(vnetIntegrationSubnetId)
-      appSettings: [
+      appSettings: concat([
         { name: 'FUNCTIONS_EXTENSION_VERSION', value: '~4' }
         { name: 'FUNCTIONS_WORKER_RUNTIME', value: 'dotnet-isolated' }
         { name: 'WEBSITE_RUN_FROM_PACKAGE', value: '1' }
@@ -155,6 +175,15 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
         { name: 'AzureWebJobsStorage__accountName', value: storage.name }
         { name: 'AzureWebJobsStorage__credential', value: 'managedidentity' }
         { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsights.properties.ConnectionString }
+        { name: 'DataAccess__Provider', value: empty(dataMotionBaseUrl) || empty(dataMotionSubscriptionKeySecretUri) ? 'DirectDatabricks' : 'DataMotion' }
+        { name: 'DataMotion__BaseUrl', value: dataMotionBaseUrl }
+        { name: 'DataMotion__Warehouse', value: dataMotionWarehouse }
+        { name: 'DataMotion__AuthenticationMode', value: 'DefaultAzureCredential' }
+        { name: 'DataMotion__AccessTokenScope', value: dataMotionAccessTokenScope }
+        { name: 'DataMotion__PollIntervalMilliseconds', value: '750' }
+        { name: 'DataMotion__MaxPollSeconds', value: '30' }
+        { name: 'DataMotion__HealthTimeoutSeconds', value: '5' }
+        { name: 'DataMotion__MaxResultChunks', value: '100' }
         { name: 'Databricks__Host', value: databricksHost }
         { name: 'Databricks__WarehouseId', value: databricksWarehouseId }
         { name: 'Databricks__AuthenticationMode', value: 'DefaultAzureCredential' }
@@ -164,7 +193,53 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
         { name: 'Databricks__MaxPollSeconds', value: '30' }
         { name: 'Databricks__HealthTimeoutSeconds', value: '5' }
         { name: 'Databricks__MaxResultChunks', value: '100' }
-      ]
+      ], empty(dataMotionSubscriptionKeySecretUri) ? [] : [
+        { name: 'DataMotion__SubscriptionKey', value: '@Microsoft.KeyVault(SecretUri=${dataMotionSubscriptionKeySecretUri})' }
+      ])
+    }
+  }
+}
+
+resource orchestratorFunctionApp 'Microsoft.Web/sites@2022-09-01' = if (deployOrchestrator) {
+  name: orchestratorFunctionAppName
+  location: location
+  tags: commonTags
+  kind: 'functionapp,linux'
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    serverFarmId: plan.id
+    httpsOnly: true
+    clientAffinityEnabled: false
+    publicNetworkAccess: functionPublicNetworkAccess ? 'Enabled' : 'Disabled'
+    virtualNetworkSubnetId: empty(vnetIntegrationSubnetId) ? null : vnetIntegrationSubnetId
+    siteConfig: {
+      linuxFxVersion: linuxFxVersion
+      ftpsState: 'Disabled'
+      minTlsVersion: '1.2'
+      http20Enabled: true
+      alwaysOn: true
+      vnetRouteAllEnabled: !empty(vnetIntegrationSubnetId)
+      appSettings: concat([
+        { name: 'FUNCTIONS_EXTENSION_VERSION', value: '~4' }
+        { name: 'FUNCTIONS_WORKER_RUNTIME', value: 'dotnet-isolated' }
+        { name: 'WEBSITE_RUN_FROM_PACKAGE', value: '1' }
+        { name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING', value: '@Microsoft.KeyVault(SecretUri=${azureFilesConnectionSecretUri})' }
+        { name: 'WEBSITE_CONTENTSHARE', value: orchestratorContentShare.name }
+        { name: 'AzureWebJobsStorage__accountName', value: storage.name }
+        { name: 'AzureWebJobsStorage__credential', value: 'managedidentity' }
+        { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsights.properties.ConnectionString }
+        { name: 'DataExposure__BaseUrl', value: dataExposureBaseUrl }
+        { name: 'DataExposure__AuthenticationMode', value: 'DefaultAzureCredential' }
+        { name: 'DataExposure__ResourceScope', value: dataExposureResourceScope }
+        { name: 'OrchestrationState__Provider', value: 'AzureTable' }
+        { name: 'OrchestrationState__TableName', value: 'OffboardingOrchestrations' }
+        { name: 'OrchestrationState__ServiceUri', value: 'https://${storage.name}.table.${environment().suffixes.storage}' }
+        { name: 'TargetAdapters__Mode', value: 'Mock' }
+      ], empty(dataExposureSubscriptionKeySecretUri) ? [] : [
+        { name: 'DataExposure__SubscriptionKey', value: '@Microsoft.KeyVault(SecretUri=${dataExposureSubscriptionKeySecretUri})' }
+      ])
     }
   }
 }
@@ -172,6 +247,26 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
 resource functionDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   name: 'offboarding-function-diagnostics'
   scope: functionApp
+  properties: {
+    workspaceId: logAnalytics.id
+    logs: [
+      {
+        categoryGroup: 'allLogs'
+        enabled: true
+      }
+    ]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+      }
+    ]
+  }
+}
+
+resource orchestratorDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (deployOrchestrator) {
+  name: 'offboarding-orchestrator-diagnostics'
+  scope: orchestratorFunctionApp
   properties: {
     workspaceId: logAnalytics.id
     logs: [
@@ -261,6 +356,47 @@ resource authSettings 'Microsoft.Web/sites/config@2022-09-01' = {
   }
 }
 
+resource orchestratorAuthSettings 'Microsoft.Web/sites/config@2022-09-01' = if (deployOrchestrator) {
+  parent: orchestratorFunctionApp
+  name: 'authsettingsV2'
+  properties: {
+    platform: {
+      enabled: true
+      runtimeVersion: '~1'
+    }
+    globalValidation: {
+      requireAuthentication: true
+      unauthenticatedClientAction: 'Return401'
+      excludedPaths: [
+        '/api/offboarding/v1/orchestrator/health'
+      ]
+    }
+    httpSettings: {
+      requireHttps: true
+    }
+    identityProviders: {
+      azureActiveDirectory: {
+        enabled: true
+        registration: {
+          clientId: orchestratorFunctionAppClientId
+          openIdIssuer: '${az.environment().authentication.loginEndpoint}${tenant().tenantId}/v2.0'
+        }
+        validation: {
+          allowedAudiences: [orchestratorFunctionAppAudience]
+          defaultAuthorizationPolicy: {
+            allowedApplications: [apimManagedIdentityClientId]
+          }
+        }
+      }
+    }
+    login: {
+      tokenStore: {
+        enabled: false
+      }
+    }
+  }
+}
+
 resource functionPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-09-01' = if (enablePrivateEndpoints) {
   name: '${functionAppName}-pe'
   location: location
@@ -281,6 +417,34 @@ resource functionPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-09-01'
 
 resource functionDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-09-01' = if (enablePrivateEndpoints && !empty(functionPrivateDnsZoneId)) {
   parent: functionPrivateEndpoint
+  name: 'default'
+  properties: {
+    privateDnsZoneConfigs: [
+      { name: 'function', properties: { privateDnsZoneId: functionPrivateDnsZoneId } }
+    ]
+  }
+}
+
+resource orchestratorPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-09-01' = if (deployOrchestrator && enablePrivateEndpoints) {
+  name: '${orchestratorFunctionAppName}-pe'
+  location: location
+  tags: commonTags
+  properties: {
+    subnet: { id: privateEndpointSubnetId }
+    privateLinkServiceConnections: [
+      {
+        name: '${orchestratorFunctionAppName}-connection'
+        properties: {
+          privateLinkServiceId: orchestratorFunctionApp.id
+          groupIds: ['sites']
+        }
+      }
+    ]
+  }
+}
+
+resource orchestratorDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-09-01' = if (deployOrchestrator && enablePrivateEndpoints && !empty(functionPrivateDnsZoneId)) {
+  parent: orchestratorPrivateEndpoint
   name: 'default'
   properties: {
     privateDnsZoneConfigs: [
@@ -424,8 +588,51 @@ resource keyVaultSecretsRole 'Microsoft.Authorization/roleAssignments@2022-04-01
   }
 }
 
+resource orchestratorStorageBlobRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployOrchestrator) {
+  name: guid(storage.id, orchestratorFunctionApp.id, storageBlobDataOwnerRoleId)
+  scope: storage
+  properties: {
+    roleDefinitionId: storageBlobDataOwnerRoleId
+    principalId: orchestratorFunctionApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource orchestratorStorageQueueRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployOrchestrator) {
+  name: guid(storage.id, orchestratorFunctionApp.id, storageQueueDataContributorRoleId)
+  scope: storage
+  properties: {
+    roleDefinitionId: storageQueueDataContributorRoleId
+    principalId: orchestratorFunctionApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource orchestratorStorageTableRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployOrchestrator) {
+  name: guid(storage.id, orchestratorFunctionApp.id, storageTableDataContributorRoleId)
+  scope: storage
+  properties: {
+    roleDefinitionId: storageTableDataContributorRoleId
+    principalId: orchestratorFunctionApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource orchestratorKeyVaultSecretsRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployOrchestrator) {
+  name: guid(keyVault.id, orchestratorFunctionApp.id, keyVaultSecretsUserRoleId)
+  scope: keyVault
+  properties: {
+    roleDefinitionId: keyVaultSecretsUserRoleId
+    principalId: orchestratorFunctionApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 output functionAppId string = functionApp.id
 output functionAppPrincipalId string = functionApp.identity.principalId
 output functionAppDefaultHostName string = functionApp.properties.defaultHostName
+output orchestratorFunctionAppId string = deployOrchestrator ? orchestratorFunctionApp.id : ''
+output orchestratorFunctionAppPrincipalId string = deployOrchestrator ? orchestratorFunctionApp.identity.principalId : ''
+output orchestratorFunctionAppDefaultHostName string = deployOrchestrator ? orchestratorFunctionApp.properties.defaultHostName : ''
 output keyVaultUri string = keyVault.properties.vaultUri
 output appInsightsConnectionString string = appInsights.properties.ConnectionString
