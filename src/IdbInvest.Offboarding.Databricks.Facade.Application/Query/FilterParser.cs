@@ -15,7 +15,7 @@ internal static class FilterParser
             {
                 var parts = item.Split(':', 3, StringSplitOptions.TrimEntries);
                 if (parts.Length != 3 || parts.Any(string.IsNullOrWhiteSpace))
-                    throw new InvalidQueryException($"Invalid filter '{item}'. Expected field:operator:value.");
+                    throw new InvalidQueryException("Invalid filter format. Expected field:operator:value.");
                 result.Add(new ParsedFilter(parts[0], parts[1].ToLowerInvariant(), parts[2]));
             }
         }

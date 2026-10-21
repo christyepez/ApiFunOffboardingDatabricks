@@ -1,4 +1,4 @@
-namespace IdbInvest.Offboarding.Databricks.Facade.Core.DTO;
+﻿namespace IdbInvest.Offboarding.Databricks.Facade.Core.DTO;
 
 public sealed record QueryResponseDto(
     IReadOnlyList<IReadOnlyDictionary<string, object?>> Data,
@@ -6,6 +6,8 @@ public sealed record QueryResponseDto(
 
 public sealed record QueryMetadataDto(
     string Resource,
+    string Model,
+    string ContractVersion,
     int Page,
     int PageSize,
     int Returned,

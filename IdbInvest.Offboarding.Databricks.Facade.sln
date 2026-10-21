@@ -12,6 +12,16 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdbInvest.Offboarding.Datab
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdbInvest.Offboarding.Databricks.Facade.Tests", "tests\IdbInvest.Offboarding.Databricks.Facade.Tests\IdbInvest.Offboarding.Databricks.Facade.Tests.csproj", "{754634A0-D798-4388-B1AC-3AC6C372BB34}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdbInvest.Offboarding.Orchestrator.Core", "src\IdbInvest.Offboarding.Orchestrator.Core\IdbInvest.Offboarding.Orchestrator.Core.csproj", "{1C3AF49C-6A4D-4132-B03B-129CB0117F37}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdbInvest.Offboarding.Orchestrator.Application", "src\IdbInvest.Offboarding.Orchestrator.Application\IdbInvest.Offboarding.Orchestrator.Application.csproj", "{2ED9CD3C-E93C-404C-89A0-4AD1661DC457}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdbInvest.Offboarding.Orchestrator.Infrastructure", "src\IdbInvest.Offboarding.Orchestrator.Infrastructure\IdbInvest.Offboarding.Orchestrator.Infrastructure.csproj", "{73B7D2F8-A119-4A2B-9C6C-88B2A90A7D11}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdbInvest.Offboarding.Orchestrator.Functions", "src\IdbInvest.Offboarding.Orchestrator.Functions\IdbInvest.Offboarding.Orchestrator.Functions.csproj", "{D5E82F40-270B-4DF3-84D7-2215A9719BB6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdbInvest.Offboarding.Orchestrator.Tests", "tests\IdbInvest.Offboarding.Orchestrator.Tests\IdbInvest.Offboarding.Orchestrator.Tests.csproj", "{8289A2E7-EC1A-4BD5-A659-5D40CAAEEC17}"
+EndProject
 Global
   GlobalSection(SolutionConfigurationPlatforms) = preSolution
     Debug|Any CPU = Debug|Any CPU
@@ -38,5 +48,25 @@ Global
     {754634A0-D798-4388-B1AC-3AC6C372BB34}.Debug|Any CPU.Build.0 = Debug|Any CPU
     {754634A0-D798-4388-B1AC-3AC6C372BB34}.Release|Any CPU.ActiveCfg = Release|Any CPU
     {754634A0-D798-4388-B1AC-3AC6C372BB34}.Release|Any CPU.Build.0 = Release|Any CPU
+    {1C3AF49C-6A4D-4132-B03B-129CB0117F37}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {1C3AF49C-6A4D-4132-B03B-129CB0117F37}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {1C3AF49C-6A4D-4132-B03B-129CB0117F37}.Release|Any CPU.ActiveCfg = Release|Any CPU
+    {1C3AF49C-6A4D-4132-B03B-129CB0117F37}.Release|Any CPU.Build.0 = Release|Any CPU
+    {2ED9CD3C-E93C-404C-89A0-4AD1661DC457}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {2ED9CD3C-E93C-404C-89A0-4AD1661DC457}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {2ED9CD3C-E93C-404C-89A0-4AD1661DC457}.Release|Any CPU.ActiveCfg = Release|Any CPU
+    {2ED9CD3C-E93C-404C-89A0-4AD1661DC457}.Release|Any CPU.Build.0 = Release|Any CPU
+    {73B7D2F8-A119-4A2B-9C6C-88B2A90A7D11}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {73B7D2F8-A119-4A2B-9C6C-88B2A90A7D11}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {73B7D2F8-A119-4A2B-9C6C-88B2A90A7D11}.Release|Any CPU.ActiveCfg = Release|Any CPU
+    {73B7D2F8-A119-4A2B-9C6C-88B2A90A7D11}.Release|Any CPU.Build.0 = Release|Any CPU
+    {D5E82F40-270B-4DF3-84D7-2215A9719BB6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {D5E82F40-270B-4DF3-84D7-2215A9719BB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {D5E82F40-270B-4DF3-84D7-2215A9719BB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+    {D5E82F40-270B-4DF3-84D7-2215A9719BB6}.Release|Any CPU.Build.0 = Release|Any CPU
+    {8289A2E7-EC1A-4BD5-A659-5D40CAAEEC17}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {8289A2E7-EC1A-4BD5-A659-5D40CAAEEC17}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {8289A2E7-EC1A-4BD5-A659-5D40CAAEEC17}.Release|Any CPU.ActiveCfg = Release|Any CPU
+    {8289A2E7-EC1A-4BD5-A659-5D40CAAEEC17}.Release|Any CPU.Build.0 = Release|Any CPU
   EndGlobalSection
 EndGlobal

@@ -25,11 +25,11 @@ public sealed class QueryBuilderTests
     public void Build_UsesWhitelistAndParameters()
     {
         var sut = new QueryBuilder();
-        var plan = sut.Build(Employees, new QueryRequestDto("employeeId,status", ["status:eq:ACTIVE"], "-employeeId", 1, 100, false));
+        var plan = sut.Build(Employees, new QueryRequestDto("employeeId,status", ["status:eq:OFFBOARDED"], "-employeeId", 1, 100, false));
         Assert.Contains("`status` = :p0", plan.Sql);
-        Assert.DoesNotContain("ACTIVE", plan.Sql);
+        Assert.DoesNotContain("OFFBOARDED", plan.Sql);
         Assert.Single(plan.Parameters);
-        Assert.Equal("ACTIVE", plan.Parameters[0].Value);
+        Assert.Equal("OFFBOARDED", plan.Parameters[0].Value);
     }
 
     [Fact]
