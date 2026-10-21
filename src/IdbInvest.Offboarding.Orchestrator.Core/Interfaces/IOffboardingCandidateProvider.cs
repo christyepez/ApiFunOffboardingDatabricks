@@ -7,4 +7,6 @@ public interface IOffboardingCandidateProvider
     Task<OffboardingCandidate?> GetByEmployeeIdAsync(
         string employeeId,
         CancellationToken cancellationToken);
+
+    Task<bool> PingAsync(CancellationToken cancellationToken);
 }

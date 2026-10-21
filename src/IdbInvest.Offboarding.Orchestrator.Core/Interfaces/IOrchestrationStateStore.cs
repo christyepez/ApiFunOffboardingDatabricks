@@ -15,4 +15,6 @@ public interface IOrchestrationStateStore
     Task SaveAsync(
         OffboardingOrchestration orchestration,
         CancellationToken cancellationToken);
+
+    Task<bool> PingAsync(CancellationToken cancellationToken);
 }

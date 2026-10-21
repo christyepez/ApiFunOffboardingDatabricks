@@ -62,6 +62,22 @@ public sealed class DataExposureCandidateProvider(
         return new OffboardingCandidate(resolvedEmployeeId, email, terminationDate);
     }
 
+    public async Task<bool> PingAsync(CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "health");
+        var token = await tokenProvider.GetTokenAsync(cancellationToken);
+        if (!string.IsNullOrWhiteSpace(token))
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        if (!string.IsNullOrWhiteSpace(_options.SubscriptionKey))
+            request.Headers.TryAddWithoutValidation(
+                "Ocp-Apim-Subscription-Key",
+                _options.SubscriptionKey);
+
+        using var response = await client.SendAsync(request, cancellationToken);
+        return response.IsSuccessStatusCode;
+    }
+
     private static string GetRequiredString(JsonElement element, string propertyName)
     {
         if (!TryGetPropertyIgnoreCase(element, propertyName, out var property))

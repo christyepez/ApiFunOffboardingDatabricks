@@ -88,6 +88,12 @@ public sealed class AzureTableOrchestrationStateStore(TableClient tableClient)
         await tableClient.SubmitTransactionAsync(actions, cancellationToken);
     }
 
+    public async Task<bool> PingAsync(CancellationToken cancellationToken)
+    {
+        await tableClient.CreateIfNotExistsAsync(cancellationToken);
+        return true;
+    }
+
     private async Task<TableEntity?> GetEntityOrNullAsync(
         string rowKey,
         CancellationToken cancellationToken)

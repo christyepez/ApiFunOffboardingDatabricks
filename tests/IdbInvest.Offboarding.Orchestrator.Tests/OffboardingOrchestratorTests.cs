@@ -152,13 +152,48 @@ public sealed class OffboardingOrchestratorTests
                 CancellationToken.None));
     }
 
-    private sealed class FakeCandidateProvider(OffboardingCandidate? candidate)
+    [Fact]
+    public async Task GetReadinessAsync_ReturnsReadyWhenDependenciesAreAvailable()
+    {
+        var sut = new OffboardingOrchestrator(
+            new FakeCandidateProvider(null, available: true),
+            [new FakeAdapter(TargetSystem.Acbs, success: true)],
+            new InMemoryStateStore(available: true));
+
+        var result = await sut.GetReadinessAsync(CancellationToken.None);
+
+        Assert.True(result.IsReady);
+        Assert.True(result.DataExposureAvailable);
+        Assert.True(result.StateStoreAvailable);
+    }
+
+    [Fact]
+    public async Task GetReadinessAsync_ReturnsDegradedWhenAnyDependencyIsUnavailable()
+    {
+        var sut = new OffboardingOrchestrator(
+            new FakeCandidateProvider(null, available: false),
+            [new FakeAdapter(TargetSystem.Acbs, success: true)],
+            new InMemoryStateStore(available: true));
+
+        var result = await sut.GetReadinessAsync(CancellationToken.None);
+
+        Assert.False(result.IsReady);
+        Assert.False(result.DataExposureAvailable);
+        Assert.True(result.StateStoreAvailable);
+    }
+
+    private sealed class FakeCandidateProvider(
+        OffboardingCandidate? candidate,
+        bool available = true)
         : IOffboardingCandidateProvider
     {
         public Task<OffboardingCandidate?> GetByEmployeeIdAsync(
             string employeeId,
             CancellationToken cancellationToken)
             => Task.FromResult(candidate);
+
+        public Task<bool> PingAsync(CancellationToken cancellationToken)
+            => Task.FromResult(available);
     }
 
     private sealed class FakeAdapter(TargetSystem target, bool success)
@@ -181,7 +216,7 @@ public sealed class OffboardingOrchestratorTests
         }
     }
 
-    private sealed class InMemoryStateStore : IOrchestrationStateStore
+    private sealed class InMemoryStateStore(bool available = true) : IOrchestrationStateStore
     {
         private readonly Dictionary<string, OffboardingOrchestration> _items =
             new(StringComparer.OrdinalIgnoreCase);
@@ -216,5 +251,8 @@ public sealed class OffboardingOrchestratorTests
             SaveCount++;
             return Task.CompletedTask;
         }
+
+        public Task<bool> PingAsync(CancellationToken cancellationToken)
+            => Task.FromResult(available);
     }
 }

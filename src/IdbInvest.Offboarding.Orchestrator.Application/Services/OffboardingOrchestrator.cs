@@ -84,6 +84,40 @@ public sealed class OffboardingOrchestrator(
         return stateStore.GetByIdAsync(orchestrationId.Trim(), cancellationToken);
     }
 
+    public async Task<OrchestratorReadiness> GetReadinessAsync(
+        CancellationToken cancellationToken)
+    {
+        var dataExposureAvailable = await IsAvailableAsync(
+            candidateProvider.PingAsync,
+            cancellationToken);
+        var stateStoreAvailable = await IsAvailableAsync(
+            stateStore.PingAsync,
+            cancellationToken);
+
+        return new OrchestratorReadiness(
+            dataExposureAvailable && stateStoreAvailable,
+            dataExposureAvailable,
+            stateStoreAvailable);
+    }
+
+    private static async Task<bool> IsAvailableAsync(
+        Func<CancellationToken, Task<bool>> probe,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await probe(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private static void Validate(StartOrchestrationCommand command)
     {
         if (string.IsNullOrWhiteSpace(command.EmployeeId))

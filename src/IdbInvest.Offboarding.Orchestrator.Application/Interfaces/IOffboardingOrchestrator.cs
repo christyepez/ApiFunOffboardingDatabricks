@@ -11,4 +11,7 @@ public interface IOffboardingOrchestrator
     Task<OffboardingOrchestration?> GetAsync(
         string orchestrationId,
         CancellationToken cancellationToken);
+
+    Task<OrchestratorReadiness> GetReadinessAsync(
+        CancellationToken cancellationToken);
 }

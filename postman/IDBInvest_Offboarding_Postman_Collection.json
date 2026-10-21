@@ -706,6 +706,14 @@
           }
         },
         {
+          "name": "Orchestrator Readiness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orchestratorBaseUrl}}/offboarding/v1/orchestrator/ready"
+          }
+        },
+        {
           "name": "Start Offboarding Orchestration",
           "request": {
             "method": "POST",

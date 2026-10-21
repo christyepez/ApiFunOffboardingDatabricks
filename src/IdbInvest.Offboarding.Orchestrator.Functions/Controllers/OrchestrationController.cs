@@ -80,6 +80,30 @@ public sealed class OrchestrationController(IOffboardingOrchestrator orchestrato
         return response;
     }
 
+    [Function("OffboardingOrchestratorReadiness")]
+    public async Task<HttpResponseData> ReadinessAsync(
+        [HttpTrigger(
+            AuthorizationLevel.Anonymous,
+            "get",
+            Route = "offboarding/v1/orchestrator/ready")] HttpRequestData req,
+        CancellationToken cancellationToken)
+    {
+        var readiness = await orchestrator.GetReadinessAsync(cancellationToken);
+        var response = req.CreateResponse(
+            readiness.IsReady ? HttpStatusCode.OK : HttpStatusCode.ServiceUnavailable);
+        response.Headers.Add("Cache-Control", "no-store");
+        await response.WriteAsJsonAsync(
+            new
+            {
+                status = readiness.IsReady ? "Ready" : "Degraded",
+                service = "Offboarding.Orchestrator",
+                dataExposure = readiness.DataExposureAvailable ? "ok" : "unavailable",
+                stateStore = readiness.StateStoreAvailable ? "ok" : "unavailable"
+            },
+            cancellationToken);
+        return response;
+    }
+
     private static IReadOnlyCollection<TargetSystem> ParseTargets(
         IReadOnlyCollection<string>? targets)
     {

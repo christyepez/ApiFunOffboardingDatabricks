@@ -39,4 +39,7 @@ public sealed class InMemoryOrchestrationStateStore : IOrchestrationStateStore
         _idByIdempotencyKey[orchestration.IdempotencyKey] = orchestration.OrchestrationId;
         return Task.CompletedTask;
     }
+
+    public Task<bool> PingAsync(CancellationToken cancellationToken)
+        => Task.FromResult(true);
 }

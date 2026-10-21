@@ -43,3 +43,8 @@ public sealed record OffboardingOrchestration(
 public sealed record OrchestrationExecutionResult(
     OffboardingOrchestration Orchestration,
     bool IsDuplicate);
+
+public sealed record OrchestratorReadiness(
+    bool IsReady,
+    bool DataExposureAvailable,
+    bool StateStoreAvailable);
