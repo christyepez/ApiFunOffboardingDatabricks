@@ -11,65 +11,46 @@ namespace IdbInvest.Offboarding.Databricks.Facade.Tests;
 public sealed class FunctionControllerTests
 {
     [Fact]
-    public async Task CorporateHealth_ReturnsHealthy_WhenDatabricksResponds()
+    public async Task CorporateHealth_IsLivenessOnly_AndDoesNotCallDatabricks()
     {
+        var repository = new FakeDatabricksRepository(false);
         var request = Request("https://localhost/api/health", "corr-health");
-        var sut = new HealthController(new FakeDatabricksRepository(true));
+        var sut = new HealthController(repository);
 
         var response = (TestHttpResponseData)await sut.CorporateHealthAsync(request, CancellationToken.None);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(0, repository.PingCalls);
         Assert.Contains("Healthy", response.ReadBody(), StringComparison.Ordinal);
+        using var healthPayload = JsonDocument.Parse(response.ReadBody());
+        Assert.False(healthPayload.RootElement.TryGetProperty("databricks", out _));
         Assert.Contains("corr-health", response.ReadBody(), StringComparison.Ordinal);
         Assert.Equal("no-store", response.Headers.GetValues("Cache-Control").Single());
     }
 
     [Fact]
-    public async Task CorporateHealth_ReturnsUnhealthy_WhenDatabricksFails()
+    public async Task DependencyHealth_ReturnsOk_WhenDatabricksResponds()
     {
-        var request = Request("https://localhost/api/health");
-        var sut = new HealthController(new FakeDatabricksRepository(false));
+        var request = Request("https://localhost/api/offboarding/v1/health");
+        var sut = new HealthController(new FakeDatabricksRepository(true));
 
-        var response = (TestHttpResponseData)await sut.CorporateHealthAsync(request, CancellationToken.None);
+        var response = (TestHttpResponseData)await sut.DependencyHealthAsync(request, CancellationToken.None);
 
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-        Assert.Contains("Unhealthy", response.ReadBody(), StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("\"databricks\":\"ok\"", response.ReadBody(), StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task Liveness_DoesNotCallDatabricks_AndReturnsOk()
+    public async Task DependencyHealth_Returns503_WhenDatabricksUnavailable()
     {
-        var repository = new FakeDatabricksRepository(false);
-        var request = Request("https://localhost/api/offboarding/v1/health/live", "live-1");
-        var sut = new HealthController(repository);
-
-        var response = (TestHttpResponseData)await sut.LiveAsync(request, CancellationToken.None);
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(0, repository.PingCalls);
-        Assert.Contains("\"status\":\"ok\"", response.ReadBody(), StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Theory]
-    [InlineData("ready")]
-    [InlineData("healthcheck")]
-    [InlineData("health")]
-    public async Task DependencyHealthAliases_Return503_WhenDatabricksUnavailable(string endpoint)
-    {
-        var request = Request($"https://localhost/api/offboarding/v1/{endpoint}");
+        var request = Request("https://localhost/api/offboarding/v1/health");
         var sut = new HealthController(new FakeDatabricksRepository(false));
 
-        var response = endpoint switch
-        {
-            "ready" => await sut.ReadyAsync(request, CancellationToken.None),
-            "healthcheck" => await sut.HealthCheckAsync(request, CancellationToken.None),
-            _ => await sut.GetAsync(request, CancellationToken.None)
-        };
+        var response = (TestHttpResponseData)await sut.DependencyHealthAsync(request, CancellationToken.None);
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-        Assert.Contains("unavailable", ((TestHttpResponseData)response).ReadBody(), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("unavailable", response.ReadBody(), StringComparison.OrdinalIgnoreCase);
     }
-
     [Fact]
     public async Task Metadata_ReturnsLogicalContract_AndCorrelationHeader()
     {
@@ -204,3 +185,6 @@ public sealed class FunctionControllerTests
         }
     }
 }
+
+
+

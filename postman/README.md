@@ -1,4 +1,4 @@
-# Postman - Offboarding Data Exposure API
+﻿# Postman - Offboarding Data Exposure API
 
 ## Files
 
@@ -11,7 +11,7 @@
 1. Import the collection.
 2. Import `local.postman_environment.json`.
 3. Select `Offboarding Databricks Facade - Local`.
-4. Start with `Health / Liveness`.
+4. Start with `Health / Application Liveness`.
 5. Run `Metadata / Employee metadata contract`.
 6. Run the Dynamic Query requests.
 
@@ -96,3 +96,4 @@ Whenever an API route, query parameter, response contract, authentication behavi
 - `dev-apim.postman_environment.json` when DEV/APIM variables change
 
 A code change that modifies the public API is not considered complete until the Postman JSON remains valid and the affected request/tests are updated.
+

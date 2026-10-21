@@ -1,4 +1,4 @@
-openapi: 3.0.3
+﻿openapi: 3.0.3
 info:
   title: Offboarding Data Exposure API
   version: 1.0.0
@@ -183,32 +183,13 @@ paths:
           description: Forbidden
         '404':
           $ref: '#/components/responses/NotFound'
-  /health/live:
+  /health:
     get:
-      summary: Check service liveness without Databricks dependency calls
-      operationId: liveness
+      summary: Check API readiness including Databricks dependency health
+      operationId: health
       responses:
         '200':
-          description: Service process is alive
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LivenessResponse'
-              example:
-                status: ok
-                service: Offboarding.Databricks.Facade
-                correlationId: health-live-001
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-  /health/ready:
-    get:
-      summary: Check service readiness including Databricks
-      operationId: readiness
-      responses:
-        '200':
-          description: Service and Databricks are ready
+          description: Service and Databricks are healthy
           content:
             application/json:
               schema:
@@ -217,7 +198,7 @@ paths:
                 status: ok
                 service: Offboarding.Databricks.Facade
                 databricks: ok
-                correlationId: health-ready-001
+                correlationId: health-001
         '401':
           description: Unauthorized
         '403':
@@ -232,51 +213,8 @@ paths:
                 status: degraded
                 service: Offboarding.Databricks.Facade
                 databricks: unavailable
-                correlationId: health-ready-002
-  /healthcheck:
-    get:
-      summary: Check end-to-end API health including Databricks
-      operationId: healthcheck
-      responses:
-        '200':
-          description: Healthy
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HealthResponse'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '503':
-          description: Dependency degraded
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HealthResponse'
-  /health:
-    get:
-      summary: Check API and Databricks dependency health
-      operationId: health
-      responses:
-        '200':
-          description: Healthy
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HealthResponse'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '503':
-          description: Dependency degraded
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HealthResponse'
-components:
-  securitySchemes:
+                correlationId: health-002
+components:  securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
@@ -422,20 +360,6 @@ components:
         correlationId:
           type: string
           example: postman-error-001
-    LivenessResponse:
-      type: object
-      required: [status, service, correlationId]
-      properties:
-        status:
-          type: string
-          enum: [ok]
-          example: ok
-        service:
-          type: string
-          example: Offboarding.Databricks.Facade
-        correlationId:
-          type: string
-          example: health-live-001
     HealthResponse:
       type: object
       required: [status, service, databricks, correlationId]

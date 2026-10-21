@@ -62,6 +62,7 @@ public sealed class DependencyInjectionTests
     private static IConfiguration BuildConfig(string mode) => new ConfigurationBuilder()
         .AddInMemoryCollection(new Dictionary<string, string?>
         {
+            ["DataAccess:Provider"] = "DirectDatabricks",
             ["Databricks:Host"] = "https://example.azuredatabricks.net",
             ["Databricks:WarehouseId"] = "warehouse",
             ["Databricks:AuthenticationMode"] = mode,

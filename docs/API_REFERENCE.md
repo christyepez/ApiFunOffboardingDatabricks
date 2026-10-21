@@ -1,4 +1,4 @@
-# Offboarding Data Exposure API
+﻿# Offboarding Data Exposure API
 
 ## 1. Purpose
 
@@ -88,37 +88,31 @@ Cache-Control: no-store
 
 ## 6. Endpoints
 
-### 6.1 Liveness
+### 6.1 Application liveness
 
 ```http
-GET /offboarding/v1/health/live
+GET /api/health
 ```
 
-Does not call Databricks. Use it to verify that the Function process is alive.
+Platform-level liveness endpoint used by Azure App Service Health Check. It does not call Databricks or any other external dependency. It returns `200` while the Function worker is alive.
 
 Example response:
 
 ```json
 {
-  "status": "ok",
+  "status": "Healthy",
   "service": "Offboarding.Databricks.Facade",
   "correlationId": "health-live-001"
 }
 ```
 
-Expected HTTP status:
-
-```text
-200
-```
-
-### 6.2 Readiness
+### 6.2 Dependency health
 
 ```http
-GET /offboarding/v1/health/ready
+GET /offboarding/v1/health
 ```
 
-Checks the Databricks dependency.
+Checks Databricks readiness. Returns `200` when Databricks is available and `503` when the dependency is unavailable or not configured correctly.
 
 Healthy example:
 
@@ -127,7 +121,7 @@ Healthy example:
   "status": "ok",
   "service": "Offboarding.Databricks.Facade",
   "databricks": "ok",
-  "correlationId": "health-ready-001"
+  "correlationId": "health-001"
 }
 ```
 
@@ -138,44 +132,10 @@ Degraded example:
   "status": "degraded",
   "service": "Offboarding.Databricks.Facade",
   "databricks": "unavailable",
-  "correlationId": "health-ready-002"
+  "correlationId": "health-002"
 }
 ```
-
-Expected status codes:
-
-```text
-200 when Databricks is reachable
-503 when Databricks is unavailable or not configured correctly
-```
-
-### 6.3 Healthcheck
-
-```http
-GET /offboarding/v1/healthcheck
-```
-
-End-to-end dependency health alias. Returns `200` when healthy and `503` when Databricks is unavailable.
-
-### 6.4 Dependency health alias
-
-```http
-GET /offboarding/v1/health
-```
-
-Backward-compatible alias for dependency health.
-
-### 6.5 Corporate platform health
-
-The Function host also exposes the platform-level health endpoint:
-
-```http
-GET /api/health
-```
-
-It returns `200` with `Healthy` or `503` with `Unhealthy`. This endpoint sits outside the versioned consumer contract.
-
-### 6.6 Resource metadata
+### 6.3 Resource metadata
 
 ```http
 GET /offboarding/v1/resources/{resource}/metadata
@@ -216,7 +176,7 @@ Example response:
 
 The metadata endpoint exposes only logical/public names.
 
-### 6.7 Dynamic resource query
+### 6.4 Dynamic resource query
 
 ```http
 GET /offboarding/v1/{resource}
@@ -351,7 +311,7 @@ Caller-supplied PII is not echoed in normalized malformed-filter errors.
 ### Local liveness
 
 ```bash
-curl -i "http://localhost:7071/api/offboarding/v1/health/live"
+curl -i "http://localhost:7071/api/health"
 ```
 
 ### Local metadata
@@ -431,9 +391,9 @@ The collection contains an `Authorization: Bearer {{accessToken}}` header on pro
 Recommended execution order:
 
 ```text
-1. Health / Liveness
-2. Health / Corporate Health Standard (Function-host only)
-3. Health / Readiness
+1. Health / Application Liveness
+2. Health / Dependency Health
+
 4. Metadata / Employee metadata contract
 5. Dynamic Query / Query employees with defaults
 6. Dynamic Query / Query employees with filters and paging
@@ -456,7 +416,7 @@ It includes:
 - response examples;
 - bearer authentication scheme;
 - logical contract metadata;
-- health `200/503` examples;
+- application liveness `200` and dependency health `200/503` examples;
 - normalized `400/404/503` error examples.
 
 Use this file to import the contract into Swagger Editor, API Management, Postman, Redocly, or another OpenAPI 3.0-compatible tool.
@@ -515,3 +475,4 @@ The UI sets `persistAuthorization` to `false`, so bearer credentials are not int
 ### Production guidance
 
 Swagger endpoints are documentation endpoints, not business endpoints. If production access is enabled later, publish them only through the approved network/authentication policy. Do not expose secrets, physical Databricks credentials, PATs, or internal connection strings in the OpenAPI document.
+

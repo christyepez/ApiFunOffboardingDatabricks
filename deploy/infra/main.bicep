@@ -158,10 +158,11 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
         { name: 'Databricks__Host', value: databricksHost }
         { name: 'Databricks__WarehouseId', value: databricksWarehouseId }
         { name: 'Databricks__AuthenticationMode', value: 'DefaultAzureCredential' }
-        { name: 'Databricks__OAuthScope', value: '2ff814a6-3304-4ab8-85cb-cd0e6f879c1d/.default' }
+        { name: 'Databricks__ResourceScope', value: '2ff814a6-3304-4ab8-85cb-cd0e6f879c1d/.default' }
         { name: 'Databricks__WaitTimeoutSeconds', value: '30' }
         { name: 'Databricks__PollIntervalMilliseconds', value: '750' }
         { name: 'Databricks__MaxPollSeconds', value: '30' }
+        { name: 'Databricks__HealthTimeoutSeconds', value: '5' }
         { name: 'Databricks__MaxResultChunks', value: '100' }
       ]
     }

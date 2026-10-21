@@ -43,10 +43,23 @@ public sealed class DatabricksStatementRepository(
 
     public async Task<bool> PingAsync(CancellationToken cancellationToken)
     {
+        using var healthTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var timeoutSeconds = Math.Clamp(_options.HealthTimeoutSeconds, 2, 15);
+        healthTimeout.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+
         try
         {
-            await ExecuteAsync("SELECT 1 AS ok", [], cancellationToken);
+            await ExecuteAsync("SELECT 1 AS ok", [], healthTimeout.Token);
             return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogWarning(ex, "Databricks health check timed out after {TimeoutSeconds} seconds.", timeoutSeconds);
+            return false;
         }
         catch (Exception ex)
         {
@@ -54,7 +67,6 @@ public sealed class DatabricksStatementRepository(
             return false;
         }
     }
-
     private async Task<StatementResponse> ExecuteAsync(string sql, IReadOnlyList<SqlParameterValue> parameters, CancellationToken cancellationToken)
     {
         EnsureConfiguration();
